@@ -1,0 +1,90 @@
+<div class="wrap">
+  <h2>Clases suspendidas</h2>
+
+  <form class="card" [formGroup]="form" (ngSubmit)="guardar()">
+    <div class="row">
+      <label>Fecha</label>
+      <input type="date" formControlName="fecha">
+    </div>
+
+    <div class="row">
+      <label>Tipo</label>
+      <div class="radios">
+        <label *ngFor="let t of tipos">
+          <input type="radio" [value]="t.value" formControlName="tipo"> {{ t.label }}
+        </label>
+      </div>
+    </div>
+
+    <div class="row" *ngIf="tipo === 'horario'">
+      <label>Hora puntual</label>
+      <select formControlName="hora">
+        <option *ngFor="let h of HORAS_VALIDAS" [value]="h">{{ h }}</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label>Motivo (opcional)</label>
+      <input type="text" formControlName="motivo" placeholder="Ej: capacitación, viaje, etc.">
+    </div>
+
+    <div class="actions">
+      <button type="submit">Guardar</button>
+    </div>
+  </form>
+
+  <div class="filtros card">
+    <strong>Rango a mostrar en tabla:</strong>
+    <input type="date" [value]="rango.desde" #desde (change)="actualizarRango(desde, hasta)">
+    <input type="date" [value]="rango.hasta" #hasta (change)="actualizarRango(desde, hasta)">
+    <div class="actions">
+      <button (click)="cargar()">Actualizar</button>
+    </div>
+  </div>
+
+  <div class="tabla card" *ngIf="!cargando && ausencias.length; else cargandoTpl">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Hora</th>
+          <th>Motivo</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of ausencias">
+          <td>{{ a.fecha | date:'dd/MM/yyyy' }}</td>
+          <td>{{ labelTipo(a.tipo) }}</td>
+          <td>{{ a.hora || '-' }}</td>
+          <td>{{ a.motivo || '-' }}</td>
+        <td class="acciones">
+          <button type="button" (click)="abrirModalEliminar(a)">Eliminar</button>
+        </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #cargandoTpl>
+    <p>Cargando…</p>
+  </ng-template>
+</div>
+<!-- ✅ Modal personalizado de confirmación -->
+<div *ngIf="modalEliminarAbierto" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Eliminar suspensión</h3>
+    <p>¿Seguro que querés eliminar esta clase suspendida?</p>
+    <p>
+      <strong>{{ ausenciaSeleccionada?.fecha | date:'dd/MM/yyyy' }}</strong>
+      - {{ labelTipo(ausenciaSeleccionada?.tipo) }}
+    </p>
+
+    <div class="modal-botones">
+      <button class="btn-confirmar" (click)="confirmarEliminar()">✅ Sí</button>
+      <button class="btn-cerrar" (click)="cerrarModalEliminar()">❌ No</button>
+    </div>
+  </div>
+</div>
+

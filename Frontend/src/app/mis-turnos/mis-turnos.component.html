@@ -1,0 +1,129 @@
+<div class="table-container" *ngIf="dias.length && horas.length" translate="no">
+  <h2>Mis turnos</h2>
+  <!-- <div *ngIf="cantidadRecuperaciones > 0" class="aviso-recuperacion-fijo">
+    🔁 Tenés {{ cantidadRecuperaciones }} clase{{ cantidadRecuperaciones > 1 ? 's' : '' }} de recuperación esta semana.
+  </div> -->
+  <div *ngIf="avisoSemana as aviso" class="aviso-recuperacion-fijo">
+    🔁 Tenés {{ aviso.count }} {{ aviso.label }} esta semana.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Horario</th>
+        <th *ngFor="let dia of dias">
+          <div>{{ dia.split(' ')[0] }}</div>
+          <div>{{ dia.split(' ')[1] }}</div>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let hora of horas">
+        <td class="hora-columna">{{ hora }}</td>
+        <td *ngFor="let dia of dias">
+          <ng-container *ngIf="!hayAusencia(dia, hora); else ausencia">
+            <ng-container *ngIf="hasReserva(dia, hora); else sinTurno">
+              <div class="clickeable"
+                [ngClass]="[
+                  nivelCss(getNivel(dia, hora)),
+                  hasReserva(dia, hora) ? 'con-reserva' : '',
+                  esRecuperacion(dia, hora) ? 'recuperacion' : '',
+                  esSuelta(dia, hora) ? 'suelta' : ''
+                ]"
+                [title]="esRecuperacion(dia, hora) ? 'Clase de recuperación' : (esSuelta(dia, hora) ? 'Clase suelta' : 'Clase regular')"
+                (click)="abrirModalDesdeCelda(dia, hora)">
+                <div class="nivel"> {{ getNivel(dia, hora) }}</div>
+                <div class="reformers">
+                  {{ getNombreCompleto(dia, hora) }}
+                  <span *ngIf="esRecuperacion(dia, hora)" class="badge-recup">(Recup)</span>
+                  <span *ngIf="esSuelta(dia, hora)" class="badge-suelta">(Suelta)</span>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+          <ng-template #ausencia>
+            <div
+              class="no-disponible feriado feriado-con-tip"
+              title="Estudio cerrado. Se acredita recuperación."
+              role="note"
+              aria-label="Estudio cerrado. Se acredita recuperación."
+            >
+              <span class="feriado-label">Estudio cerrado</span>
+              <span class="badge-recupera">Se acredita recuperación</span>
+            </div>
+          </ng-template>
+          <ng-template #sinTurno>
+            <div class="no-disponible"> -- </div>
+          </ng-template>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<!-- ✅ MODAL PARA RESERVAS PERMANENTES -->
+<div *ngIf="modalAbierto" class="modal-overlay">
+  <div class="modal-content">
+    <h3>¿Querés cancelar este turno?</h3>
+    <p>
+      Día: <strong>{{ turnoAEliminar?.horario?.dia }}</strong><br>
+      Hora: <strong>{{ turnoAEliminar?.horario?.hora }}</strong><br>
+      Fecha: <strong>{{ formatearFechaArg(turnoAEliminar?.fechaTurno) }}</strong><br>
+      Nivel: <strong>{{ turnoAEliminar?.horario?.nivel }}</strong>
+    </p>
+
+    <p>¿Cómo querés cancelarlo?</p>
+
+    <div class="acciones-centradas">
+      <button class="btn-cancelar"
+              (click)="confirmarCancelacion('momentanea')"
+              [disabled]="uiBloqueadoAlumnoCancel">🕒 Solo por esta vez</button>
+
+      <button class="btn-cancelar"
+              (click)="confirmarCancelacion('permanente')"
+              [disabled]="uiBloqueadoAlumnoCancel">❌ Cancelar permanentemente</button>
+
+      <button class="btn-cerrar" (click)="cerrarModal()">🚫 Cerrar</button>
+    </div>
+
+    <!-- Mensaje si está bloqueado -->
+    <p *ngIf="uiBloqueadoAlumnoCancel" class="text-danger">
+      ⚠️ Solo se puede cancelar un turno hasta 2 horas antes de su inicio.
+    </p>
+
+    <!-- Zona de mensajes -->
+    <div *ngIf="mostrarConfirmacionUsuario"
+         [ngClass]="{'mensaje-confirmacion': true, 'success': !esErrorUsuarioCancel, 'error': esErrorUsuarioCancel}">
+      {{ mensajeUsuarioCancel }}
+    </div>
+  </div>
+</div>
+
+<!-- ✅ MODAL PARA RESERVAS TEMPORALES -->
+<div *ngIf="mostrarModalConfirmarAccion" class="modal-overlay">
+  <div class="modal-content">
+    <h3>{{ tituloConfirmacion }}</h3>
+    <p>{{ textoConfirmacion }}</p>
+
+    <div class="acciones-centradas">
+      <button class="btn-confirmar" (click)="aceptarCancelacion()">✅ Sí, cancelar</button>
+      <button class="btn-cerrar" (click)="cerrarConfirmacionFinal()">❌ No</button>
+    </div>
+  </div>
+</div>
+<!-- ✅ MODAL DE RECUPERACIONES -->
+<div *ngIf="mostrarModalRecuperacion" class="modal-overlay">
+  <div class="modal-content">
+    <h3>¡Tenés {{ avisoSemana?.label || 'clases pendientes' }}!</h3>
+    <p>
+      Actualmente tenés <strong>{{ avisoSemana?.count }}</strong>
+      {{ avisoSemana?.label }} pendiente{{ (avisoSemana?.count || 0) > 1 ? 's' : '' }}.
+    </p>
+    <div class="acciones-centradas">
+      <button class="btn-confirmar" (click)="mostrarModalRecuperacion = false">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+
+
+

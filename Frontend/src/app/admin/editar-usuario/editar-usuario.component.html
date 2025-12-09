@@ -1,0 +1,71 @@
+<form *ngIf="!cargando" (ngSubmit)="guardarCambios()">  
+  <div class="registro-wrapper">
+    <div id="registro_alumnos" class="singin-container">
+      <p class="titulo-registro">Editar Usuario</p>
+
+      <form (ngSubmit)="guardarCambios()">
+        <div class="form-group">
+          <label for="apellido">Apellido:</label>
+          <input id="apellido" type="text" [(ngModel)]="usuario.apellido" name="apellido" required />
+        </div>
+
+        <div class="form-group">
+          <label for="nombre">Nombre:</label>
+          <input id="nombre" type="text" [(ngModel)]="usuario.nombre" name="nombre" required />
+        </div>
+
+        <div class="form-group">
+          <label for="dni">DNI:</label>
+          <input id="dni" type="text" [(ngModel)]="usuario.dni" name="dni" required />
+        </div>
+
+        <div class="form-group">
+          <label for="telefono">Teléfono:</label>
+          <input id="telefono" type="text" [(ngModel)]="usuario.telefono" name="telefono" />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input id="email" type="email" [(ngModel)]="usuario.email" name="email" required />
+        </div>
+
+        <div class="form-group">
+          <label for="nivel">Nivel:</label>
+          <select id="nivel" [(ngModel)]="usuario.nivel" name="nivel" required>
+            <option value="">Seleccionar nivel</option>
+            <option value="Básico">Básico</option>
+            <option value="Intermedio">Intermedio</option>
+            <option value="Avanzado">Avanzado</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="planMensual">Plan mensual:</label>
+          <select id="planMensual" [(ngModel)]="usuario.planMensual" name="planMensual" required>
+          <option value="">Seleccionar plan</option>
+          <option value="0">Clase suelta / prueba (sin mensualidad)</option>
+          <option value="4">4 clases / mes</option>
+          <option value="8">8 clases / mes</option>
+          <option value="12">12 clases / mes</option>
+          </select>
+        </div>
+
+        <div class="form-group botonera-horizontal">
+          <button type="submit" class="btn-singin">Guardar Cambios</button>
+          <button type="button" class="btn-cerrarForm" (click)="cerrarFormulario()">Cerrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</form>
+<div *ngIf="cargando" class="spinner">
+  <p>Cargando usuario...</p>
+</div>
+<!-- ✅ MODAL DE CONFIRMACIÓN -->
+<div *ngIf="modalVisible" class="modal-overlay">
+  <div class="modal-content" [ngClass]="{'error': esError, 'success': !esError}">
+    <h3>{{ mensajeModal }}</h3>
+    <button class="btn-cerrar" (click)="modalVisible = false">Cerrar</button>
+  </div>
+</div>
+

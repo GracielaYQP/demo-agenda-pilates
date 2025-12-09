@@ -1,0 +1,54 @@
+<div *ngIf="esAdmin">
+  <div class="registro-wrapper">
+    <div id="registro_alumnos" class="singin-container">
+      <p class="titulo-registro">Enviar invitación</p>
+
+      <form [formGroup]="form" (ngSubmit)="enviarInvitacion()">
+        <div class="form-group">
+          <label for="telefono">Teléfono alumno/a:</label>
+          <input id="telefono" type="text" formControlName="telefono" />
+          <p class="text-danger" *ngIf="form.get('telefono')?.invalid && form.get('telefono')?.touched">
+            Ingresa un teléfono válido.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="nivel">Nivel:</label>
+          <select id="nivel" formControlName="nivel">
+            <option value="">Seleccionar nivel</option>
+            <option value="Básico">Básico</option>
+            <option value="Intermedio">Intermedio</option>
+            <option value="Avanzado">Avanzado</option>
+          </select>
+          <p class="text-danger" *ngIf="form.get('nivel')?.invalid && form.get('nivel')?.touched">
+            Selecciona un nivel.
+          </p>
+        </div>
+
+
+        <div class="form-group botonera-horizontal">
+          <button type="submit" class="btn-singin">Generar invitación</button>
+          <button type="button" class="btn-cerrar" (click)="cerrarFormulario()">Cerrar</button>
+        </div>
+      </form>
+
+      <div *ngIf="success" class="alert-success text-center">{{ success }}</div>
+      <div *ngIf="error" class="alert-error text-center">{{ error }}</div>
+
+      <div *ngIf="generatedLink" class="alert-link">
+        <p>Compartir link de invitación:</p>
+        <code>{{ generatedLink }}</code>
+
+        <div class="button-group">
+          <button class="btn-singin" type="button" (click)="copiarAlPortapapeles()">Copiar link</button>
+          
+          <a [href]="linkWhatsapp" target="_blank">
+            <button class="btn-singin" type="button">
+               <i class="fa fa-whatsapp"></i> Enviar por WhatsApp
+            </button>
+          </a>
+        </div>
+      </div>      
+    </div>
+  </div>
+</div>

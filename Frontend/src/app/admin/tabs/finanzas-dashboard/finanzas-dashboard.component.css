@@ -1,0 +1,194 @@
+.wrap { max-width: 1360px; margin: 24px auto; padding: 0 12px; }
+
+.filtros{
+  display:flex;
+  flex-wrap:wrap;    
+  gap:12px;
+  align-items:flex-end;
+  justify-content: center;   
+  margin:10px 0 18px;
+  background:#f5f5f5;        
+  padding:12px 16px;       
+  border-radius:10px;      
+}
+
+.filtros label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:.9rem;
+  font-weight:600;
+  color:#747373;              
+}
+
+.filtros select,
+.filtros input{
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  background:#fff;        
+  min-width:120px;
+}
+
+.filtros select:focus,
+.filtros input:focus{
+  outline:none;
+  border-color:#b53490;  
+  box-shadow:0 0 0 3px rgba(181,52,144,.2);
+}
+
+.loading, .error { padding:10px 12px; border-radius:8px; }
+.loading { background:#f5f5f5; }
+.error { background:#ffe5e5; color:#b00020; }
+
+.cards { display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:16px; }
+.card { background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(0,0,0,.08); }
+.kpi-title { margin:0; color:#666; font-size:.9rem; }
+.kpi-value { margin:4px 0 0; font-weight:700; font-size:1.4rem; }
+.kpi-sub { margin:6px 0 0; color:#444; font-size:.95rem; }
+
+.charts { display:grid; grid-template-rows: 1fr 1fr; gap:12px; margin-bottom:16px;}
+.panel { background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(0,0,0,.08); }
+.panel h3 { margin:0 0 10px; color:#333; }
+
+/* Barras horizontales (por plan) */
+.bars { display:flex; flex-direction:column; gap:8px; }
+.bar { display:grid; grid-template-columns: 80px 1fr 100px; align-items:center; gap:8px; }
+.bar-label { color:#555; }
+.bar-fill { height:12px; border-radius:8px; background:linear-gradient(90deg, #b53490, #db99c7); width: calc(var(--pct, 0) * 1%); transition: width .3s; }
+.bar-value { text-align:right; color:#333; }
+
+/* “Línea” simple (de hecho columnas) */
+.line { display:flex; align-items:flex-end; gap:6px; height:160px; padding:6px; border:1px dashed #ddd; border-radius:8px; }
+.line-point { width:16px; position:relative; }
+.line-dot { position:absolute; bottom:calc(100% - 8px); left:50%; transform:translateX(-50%); width:8px; height:8px; border-radius:50%; background:#b53490; }
+.line-x { position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:.7rem; color:#777; }
+
+/* Tabla de deudores */
+.table-scroll { overflow:auto; }
+.table { width:100%; border-collapse:collapse; }
+.table th, .table td { border:1px solid #eee; padding:8px; text-align:left; white-space:nowrap; }
+.table thead th { background:#faf7f9; color:#333; }
+.table tr.atrasado { background:#fff3f3; }
+.table .empty { text-align:center; color:#666; }
+.acciones a { margin-right:8px; }
+
+.btn-registrar { background:#b53490; color:#fff; border:0; border-radius:8px; padding:6px 10px; cursor:pointer; }
+.btn-registrar:hover { filter:brightness(.95); }
+
+/* =========================
+   <= 768px (tablets)
+   ========================= */
+@media (max-width: 768px){
+  .wrap{ padding:0 10px; }
+
+  h2{
+    font-size: clamp(1.2rem, 3.5vw, 1.4rem);
+    padding: 12px 14px;
+    margin: 12px auto 20px;
+  }
+
+  .filtros{
+    gap:10px;
+    padding:10px 12px;
+    align-items:stretch;
+  }
+  .filtros label{
+    flex:1 1 160px;
+    font-size:.9rem;
+  }
+  .filtros select,
+  .filtros input{
+    width:100%;
+    min-width:unset;
+  }
+
+  /* Tarjetas y charts más fluidos */
+  .cards{
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .charts{
+    grid-template-columns: 1fr; /* una debajo de la otra */
+  }
+
+  /* Barras por plan: columnas más angostas */
+  .bar{
+    grid-template-columns: 70px 1fr 80px;
+    gap:6px;
+  }
+
+  /* Línea (ingresos por día) un poco más baja */
+  .line{ height:140px; }
+
+  /* Tabla más compacta */
+  .table th, .table td{
+    padding:6px;
+    font-size:.92rem;
+  }
+
+  /* Ocultá columna de 'Contacto' para ganar espacio */
+  .table th:nth-child(7), .table td:nth-child(7){ display:none; }
+}
+
+/* =========================
+   <= 480px (móvil)
+   ========================= */
+@media (max-width: 480px){
+  .wrap{ padding:0 8px; }
+
+  h2{
+    font-size: clamp(1.05rem, 5vw, 1.2rem);
+    padding: 10px 12px;
+    margin: 10px auto 16px;
+  }
+
+  .filtros{
+    gap:8px;
+    padding:10px;
+    border-radius:8px;
+  }
+  .filtros label{
+    flex:1 1 120px;
+    font-size:.85rem;
+    gap:4px;
+  }
+
+  /* Tarjetas y charts a 1 columna */
+  .cards{
+    grid-template-columns: 1fr;
+  }
+  .charts{
+    grid-template-columns: 1fr;
+  }
+
+  /* Barras por plan: versión bien compacta */
+  .bar{
+    grid-template-columns: 58px 1fr 64px;
+    gap:6px;
+  }
+  .bar-label{ font-size:.85rem; }
+  .bar-value{ font-size:.85rem; }
+
+  /* Línea más baja aún */
+  .line{ height:120px; }
+
+  /* Tabla: dejar lo esencial (Alumno, Plan, Estado, Acción) */
+  .table th, .table td{
+    padding:6px 4px;
+    font-size:.88rem;
+    white-space:nowrap;
+  }
+  /* Ocultar: Monto (3), Último pago (4), Días (5), Contacto (7) */
+  .table th:nth-child(3), .table td:nth-child(3),
+  .table th:nth-child(4), .table td:nth-child(4),
+  .table th:nth-child(5), .table td:nth-child(5),
+  .table th:nth-child(7), .table td:nth-child(7){
+    display:none;
+  }
+
+  /* Botón full-width en móvil */
+  .btn-registrar{
+    width:100%;
+    padding:8px 10px;
+  }
+}

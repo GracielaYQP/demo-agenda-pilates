@@ -1,0 +1,146 @@
+.site-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  width: 100%;
+  z-index: 3000;
+  background-color: #F5F5F5;
+  padding: 10px 20px;
+  color: #000;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+/* Contenedor flex para logo y texto */
+.header-container {
+  display: flex;
+  align-items: center; 
+  justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: nowrap;
+   max-width: calc(100vw - 40px); 
+  margin: 0 auto; 
+}
+
+/* Logo alineado a la izquierda, tamaño fijo */
+.logo {
+  max-width: 100px;
+  height: auto;
+}
+
+.title-container {
+  flex-grow: 1;
+  text-align: center;
+}
+
+/* Título grande, centrado verticalmente, que ocupe todo el espacio restante */
+h1 {
+  font-size: 2.5rem; 
+  flex-grow: 1;
+  margin: 0;
+  text-align: center;
+  font-weight: bold;
+  line-height: 1.2;
+  color: #b53490;
+}
+
+.bienvenida {
+  align-self: flex-end;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #000;
+  margin-left: auto; 
+  margin-bottom: 4px;
+}
+
+.hamburger {
+  font-size: 1.8rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #b53490;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 9000;
+}
+
+.side-menu {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 250px;
+  height: 100%;
+  background-color: #b9b8b8;
+  border-left: 2px solid #b53490;
+  padding: 20px;
+  box-shadow: -4px 0 6px rgba(0, 0, 0, 0.1);
+  transition: right 0.3s ease-in-out;
+  z-index: 10000;
+}
+
+.side-menu.open {
+  right: 0;
+}
+
+.side-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.side-menu li {
+  margin-bottom: 15px;
+}
+
+.side-menu a {
+  text-decoration: none;
+  color: #b53490;
+  font-weight: bold;
+}
+
+.logout{
+  cursor:pointer;
+}
+@media (max-width: 768px) {
+  .header-container {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    padding: 0 10px;
+  }
+
+  .logo {
+    max-width: 50px;
+    margin-left: 0;
+  }
+
+  .title-container {
+    flex-grow: 1;
+    text-align: center;
+  }
+
+  .title-container h1 {
+    font-size: 1.2rem;  
+    margin: 0;
+  }
+
+  .bienvenida {
+    font-size: 1rem;
+    text-align: center;
+    margin: 5px auto 0 auto;
+  }
+
+  .hamburger {
+    font-size: 1.4rem;
+    margin-left: 10px;
+  }
+
+  .side-menu {
+    width: 80%;
+    max-width: 300px;
+  }
+}

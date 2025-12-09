@@ -1,0 +1,18 @@
+.social-column {
+  z-index: 1000; /* Asegura que quede por encima de otros elementos */
+  left: 0;
+  padding: 10px;
+}
+
+.social-column i {
+  color: #111111;  
+  transition: color 0.3s;
+}
+
+.social-column i:hover,
+.social-column i:active {
+  color: #B53491; /* Fucsia cuando se activan o al pasar el mouse */
+}
+
+
+

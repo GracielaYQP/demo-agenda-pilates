@@ -1,0 +1,265 @@
+.admin-section {
+  position: static;
+  min-height: auto;
+  display: block;
+  padding: 40px 16px;
+  overflow: visible;
+  background: transparent; 
+}
+
+/* ya no usamos overlay */
+.overlay { display: none !important; }
+
+/* ancho y centrado del contenido */
+.content {
+  position: static;
+  z-index: auto;
+  width: 80%;
+  max-width: 520px;   /* si preferís 600px, dejalo en 600 */
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* ====== Card/panel ====== */
+.card {
+  margin: 0 auto;
+  padding: 20px 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255,255,255,.92);            /* menos “vidrio” */
+  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+}
+
+/* Título con estilo del sitio */
+h2 {
+  display: inline-block;
+  padding: 14px 16px;
+  text-transform: uppercase;
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  color: #b53490;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  display: block;
+  width: fit-content;
+  margin: 10px auto 40px auto;
+  border: 2px solid black;
+}
+
+/* ====== Formulario ====== */
+form {
+  display: grid;
+  gap: 14px;
+}
+
+/* Fila: label + input */
+.row {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;                     
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f8f8f8;                         
+  border: 1px solid #ececf1;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+
+.row > label {
+  flex: 1 1 auto;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+/* Campo con prefijo $ */
+.money {
+  position: relative;
+  flex: 0 0 150px; 
+}
+
+.money::before {
+  content: "$";
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 700;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.money input[type="number"] {
+  width: 100%;
+  height: 38px;               
+  padding: 0 12px 0 20px;       /* espacio para $ */
+  border: 1px solid #dcdce2;
+  border-radius: 10px;
+  background: #fcfcfd;
+  color: var(--text);
+  font-size: 16px;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+/* Focus accesible */
+.money input[type="number"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  background: #fff;
+}
+
+
+/* Nota al pie */
+.footnote {
+  margin-top: 12px;
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 90vw; height: 90vh;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 300px;
+  max-width: 400px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  display: flex; flex-direction: column; align-items: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-content.success { border: 2px solid #28a745; }
+.modal-content.error { border: 2px solid #dc3545; }
+
+.actions {
+  display: flex;
+  justify-content: center; /* 👈 centra ambos */
+  gap: 16px;               /* espacio entre ellos */
+  margin-top: 20px;
+}
+
+.btn-accion {
+  flex: 0 0 160px;       /* mismo ancho fijo */
+  padding: 12px 0;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+  font-size: 16px;
+  border: none;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Estilos individuales */
+.btn-accion.guardar {
+  background: #b53490;
+  color: #fff;
+}
+.btn-accion.guardar:hover {
+  background: #af1155;
+  color: #000;
+}
+
+.btn-accion.cerrar {
+  background: #a8a6a6;
+  color: #333;
+}
+.btn-accion.cerrar:hover {
+  background: #535353;
+  color: #fff;
+}
+
+
+/* ====== Responsive ====== */
+/* ≤ 768px (tablets) */
+@media (max-width: 768px) {
+  .content {
+    width: 100%;
+    max-width: 520px;
+    padding: 20px 12px;
+  }
+  .card {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  h2 { 
+    font-size: 1.15rem; 
+  }
+
+  form { gap: 12px; }
+  .row {
+    /* lo importante: pasar a columna */
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .row > label {
+    width: 100%;
+  }
+
+  .money {
+    /* que el contenedor del input se estire y no tenga ancho fijo */
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .money input[type="number"] {
+    width: 100%;
+    height: 46px;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .btn-accion {
+    flex: 0 0 auto !important; 
+    height: auto !important;
+    padding: 10px 0 !important;
+    width: 100%;
+    min-height: 42px;
+    max-height: 56px;
+  }
+
+}
+
+/* ≤ 480px (teléfonos) */
+@media (max-width: 480px) {
+  .content { padding: 16px 10px; }
+  .card { padding: 14px 12px; border-radius: 14px; }
+
+  h2 { font-size: 1rem; padding: 10px 12px; }
+
+  .row { padding: 8px 10px; }
+
+  .money::before { left: 10px; } /* ajusta el símbolo $ */
+  .money input[type="number"] {
+    height: 44px;
+    padding-left: 26px;     /* espacio para $ */
+    font-size: 15px;
+  }
+
+  button[type="submit"] { min-height: 44px; }
+}
+

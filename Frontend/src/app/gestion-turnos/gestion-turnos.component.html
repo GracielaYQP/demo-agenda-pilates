@@ -1,0 +1,318 @@
+<div class="table-container" *ngIf="horarios.length > 0" translate="no">
+  <h2>Gestión de Turnos</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Horario</th>
+        <th *ngFor="let dia of dias">
+          <div>{{ dia.split(' ')[0] }}</div>
+          <div>{{ dia.split(' ')[1] }}</div>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let hora of horas">
+        <td class="hora-columna">{{ hora }}</td>
+        <td *ngFor="let dia of dias">
+                    
+                    <!-- Celda día/hora -->
+          <ng-container [ngSwitch]="estadoCierre(dia, hora)">
+
+            <!-- ✅ CERRADO FIJO: solo “Estudio cerrado” -->
+            <ng-container *ngSwitchCase="'cerrado_fijo'">
+              <div
+                class="no-disponible feriado feriado-con-tip"
+                title="Estudio cerrado."
+                role="note"
+                aria-label="Estudio cerrado."
+              >
+                <span class="feriado-label">Estudio cerrado</span>
+                <!-- 👇 SIN 'Se acredita recuperación' -->
+              </div>
+            </ng-container>
+
+            <!-- ✅ AUSENCIA/FERIADO: mantiene “Se acredita recuperación” -->
+            <ng-container *ngSwitchCase="'ausencia'">
+              <div
+                class="no-disponible feriado feriado-con-tip"
+                title="Estudio cerrado. Se acredita recuperación."
+                role="note"
+                aria-label="Estudio cerrado. Se acredita recuperación."
+              >
+                <span class="feriado-label">Estudio cerrado</span>
+                <span class="badge-recupera">Se acredita recuperación</span>
+              </div>
+            </ng-container>
+
+            <!-- ✅ ABIERTO NORMAL -->
+            <ng-container *ngSwitchCase="'ninguno'">
+              <ng-container *ngFor="let turno of getTurnos(dia, hora)">
+                <div
+                  class="clickeable {{ nivelCss(turno.nivel) }}"
+                  (click)="abrirTurno(turno)"
+                >
+                  <div class="nivel">{{ turno.nivel }}</div>
+                  <div class="reformers">
+                    Reformers libres: {{  libres(turno) }}
+                  </div>
+
+                  <!-- Reservas visibles -->
+                  <div class="reservas" *ngIf="turno.reservas?.length > 0">
+                    <div *ngFor="let r of turno.reservas">
+                      <ng-container
+                        *ngIf="r.estado === 'reservado' && (rolUsuario === 'admin' || turno.nivel.toLowerCase() === usuarioNivel.toLowerCase())"
+                      >
+                        <span
+                          class="reserva-item"
+                          [ngClass]="{
+                            recup: r.tipo === 'recuperacion',
+                            suelta: r.tipo === 'suelta'
+                          }"
+                        >
+                          {{ r.nombre }} {{ r.apellido }}
+                          <span *ngIf="r.tipo === 'recuperacion'" class="badge-recup" aria-label="Reserva de recuperación">(Recup)</span>
+                          <span *ngIf="r.tipo === 'suelta'" class="badge-suelta" aria-label="Clase suelta">(Suelta)</span>
+                        </span>
+                      </ng-container>
+                    </div>
+                  </div>
+
+                  <!-- ✅ Solo admin: controles de bloqueo -->
+                  <div
+                    *ngIf="rolUsuario === 'admin'"
+                    class="bloqueo-controls"
+                    style="margin-top:6px; display:flex; gap:8px; align-items:center; justify-content:center;"
+                  >
+                    <button
+                      type="button"
+                      (click)="$event.stopPropagation(); ajustarBloqueo(turno, -1)"
+                      [disabled]="(turno.blockedReformers || 0) <= 0"
+                    >−</button>
+
+                    <span><strong>Bloqueados:</strong> {{ turno.blockedReformers || 0 }}</span>
+
+                    <button
+                      type="button"
+                      (click)="$event.stopPropagation(); ajustarBloqueo(turno, +1)"
+                     
+                       [disabled]="
+                        ((turno.blockedReformers || 0) >=
+                        max(0, (turno.totalReformers||0) -
+                        ((turno.reformersReservados||0) || ocupadasEn((turno.id||turno.idHorario), turno.fecha))))
+  "
+                      >+</button>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-container>
+
+            <!-- Fallback sin turno -->
+            <ng-container *ngSwitchDefault>
+              <div class="no-disponible"> -- </div>
+            </ng-container>
+          </ng-container>
+
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ✅ MODAL PRINCIPAL: EDITAR TURNO -->
+<div *ngIf="modalAbierto && !mostrarFormAgregar && !modalConfirmacionFinalAbierta && !mostrarModalTipoCancelacion" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Editar Turno: {{ turnoSeleccionado.dia }} - {{ turnoSeleccionado.hora }}</h3>
+    <p>Nivel: {{ turnoSeleccionado.nivel }}</p>
+
+    <div *ngIf="turnoSeleccionado.reservas?.length > 0">
+      <h4>Reservas actuales:</h4>
+      <ul>
+        <ng-container *ngFor="let r of turnoSeleccionado.reservas">
+          <li>
+            <span [ngStyle]="{ color: !r.automatica ? 'red' : 'inherit' }">
+              {{ r.nombre }} {{ r.apellido }} <span *ngIf="!r.automatica">(Recup)</span>
+            </span>
+            <button class="btn-anular" (click)="abrirModalTipoCancelacion(r)">Anular</button>
+          </li>
+        </ng-container>
+      </ul>
+    </div>
+
+    <div *ngIf="turnoSeleccionado.reservas?.length === 0">
+      <p>No hay reservas aún en este turno.</p>
+    </div>
+
+    <div class="botones-modal-principal">
+      <button (click)="abrirFormAgregar()" class="btn-agregar-toggle">+ Agregar reserva para otro usuario</button>
+      <button class="btn-cerrar" (click)="cerrarModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ MODAL PARA AGREGAR NUEVA RESERVA -->
+<div *ngIf="mostrarFormAgregar && !modalConfirmacionFinalAbierta" class="modal-overlay is-tall">
+  <div class="modal-content is-tall">
+    <h3>Agregar nueva reserva</h3>
+    <p>Día: <strong>{{ turnoSeleccionado?.dia }}</strong></p>
+    <p>Hora: <strong>{{ turnoSeleccionado?.hora }}</strong></p>
+    <p>Nivel: <strong>{{ turnoSeleccionado?.nivel }}</strong></p>
+
+    <label for="modoBusqueda">Buscar usuario por:</label>
+    <select id="modoBusqueda" [(ngModel)]="busquedaModo">
+      <option value="nombre-apellido">Nombre y Apellido</option>
+      <option value="telefono">Teléfono</option>
+    </select>
+
+    <div *ngIf="busquedaModo === 'nombre-apellido'">
+      <label><strong>Alumno:</strong></label>
+
+      <!-- 🔎 Buscador -->
+      <input
+        type="text"
+        [(ngModel)]="filtroAlumno"
+        (ngModelChange)="aplicarFiltroAlumnos()"
+        placeholder="Buscá por apellido, nombre o teléfono…"
+      />
+
+      <!-- ✅ Select filtrado -->
+      <select
+        [(ngModel)]="usuarioSeleccionadoId"
+        (ngModelChange)="onSelectAlumno($event)">
+        <option [ngValue]="null" disabled>Elegí un alumno…</option>
+        <option *ngFor="let a of alumnosFiltrados" [ngValue]="a.id">
+          {{ a.apellido | uppercase }}, {{ a.nombre }}
+        </option>
+      </select>
+      <div *ngIf="alumnosFiltrados.length === 0" class="hint">
+        No se encontraron alumnos para “{{ filtroAlumno }}”.
+      </div>
+    </div>
+    <div *ngIf="busquedaModo === 'telefono'">
+      <input type="text" [(ngModel)]="telefonoNuevo" placeholder="Teléfono" />
+    </div>
+
+    <div class="form-group">
+      <label for="tipoReserva"><strong>Tipo de reserva:</strong></label>
+      <select id="tipoReserva" [(ngModel)]="tipoReserva">
+        <option [ngValue]="'automatica'">Clase habitual (recurrente)</option>
+        <option [ngValue]="'recuperacion'">Recuperación</option>
+        <option [ngValue]="'suelta'">Suelta / de prueba</option>
+      </select>
+    </div>
+
+    <div class="modal-botones">
+      <button class="btn-confirmar" (click)="abrirModalConfirmacionFinal()">Confirmar</button>
+      <button class="btn-cerrar" (click)="cerrarFormAgregar()">Cancelar</button>
+    </div>
+    <div *ngIf="formMsg"
+        [ngClass]="{ 'mensaje-bloqueo': formIsError, 'mensaje-ok': !formIsError }"
+        role="alert">
+      {{ formMsg }}
+    </div>
+  </div>
+</div>
+
+<!-- ✅ NUEVO MODAL DE CONFIRMACIÓN FINAL PARA RESERVAS (ADMIN) -->
+<div *ngIf="modalConfirmacionFinalAbierta" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Confirmar nueva reserva</h3>
+    <p>¿Estás seguro de que querés agregar la reserva?</p>
+    <div class="modal-botones">
+      <button class="btn-confirmar" (click)="confirmarReservaFinal()">✅ Sí, agregar</button>
+      <button class="btn-cerrar" (click)="cerrarModalConfirmacionFinal()">❌ No</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ MODAL TIPO DE CANCELACIÓN -->
+<div *ngIf="mostrarModalTipoCancelacion" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Tipo de cancelación</h3>
+    <p>¿Querés cancelar momentáneamente o permanentemente la reserva de
+      <strong>{{ reservaSeleccionada?.nombre }} {{ reservaSeleccionada?.apellido }}</strong>?</p>
+    <div class="modal-botones">
+      <button class="btn-confirmar" (click)="confirmarCancelacion('momentanea')">Momentánea</button>
+      <button class="btn-confirmar" (click)="confirmarCancelacion('permanente')">Permanente</button>
+      <button class="btn-cerrar" (click)="cerrarModalTipoCancelacion()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ MODAL CONFIRMACIÓN FINAL DE CANCELACIÓN -->
+<div *ngIf="mostrarModalConfirmarAccion" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Confirmar cancelación</h3>
+    <p>{{ textoConfirmacion }}</p>
+    <div class="modal-botones">
+      <button class="btn-confirmar" (click)="ejecutarCancelacion()">✅ Aceptar</button>
+      <button class="btn-cerrar" (click)="cerrarModalConfirmarAccion()">❌ Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ MODAL  PARA ALUMNO -->
+<div *ngIf="modalAlumnoAbierto" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Confirmar Reserva</h3>
+    <p><strong>Nombre:</strong> {{ nombreUsuario }}</p>
+    <p><strong>Apellido:</strong> {{ apellidoUsuario }}</p>
+    <p><strong>Día:</strong> {{ turnoSeleccionado?.dia }}</p>
+    <p><strong>Hora:</strong> {{ turnoSeleccionado?.hora }}</p>
+    <p><strong>Nivel:</strong> {{ turnoSeleccionado?.nivel }}</p>
+    <!-- Checklist para indicar si es una recuperación -->
+    <div class="form-group">
+      <label for="tipoReserva"><strong>Tipo de reserva:</strong></label>
+      <select id="tipoReserva" [(ngModel)]="tipoReserva" (change)="onCambioTipoReserva()" [disabled]="uiBloqueadoAlumno">
+        <option [ngValue]="'automatica'">Clase habitual (recurrente)</option>
+        <option [ngValue]="'recuperacion'">Recuperación</option>
+        <option [ngValue]="'suelta'">Suelta / de prueba</option>
+      </select>
+    </div>
+    <div *ngIf="mensajeBloqueoRecuperacion && (tipoReserva === 'recuperacion' || tipoReserva==='suelta')" class="mensaje-bloqueo">
+      {{ mensajeBloqueoRecuperacion }}
+    </div>
+
+    <button class="btn-confirmar"
+        (click)="confirmarReserva()"
+        [disabled]="reservaAutomatica === false && mensajeBloqueoRecuperacion">Confirmar</button>
+
+    <button class="btn-cerrar" (click)="cerrarModalAlumno()">Cancelar</button>
+
+    <div *ngIf="mostrarConfirmacion"
+        [ngClass]="{'mensaje-confirmacion': true, 'success': !esErrorReserva, 'error': esErrorReserva}">
+      {{ mensajeReserva }}
+    </div>
+  </div>
+</div>
+
+<!--MODAL CONFIRMAR TIPO DE CANCELACIÓN -->
+<div *ngIf="mostrarModalTipoCancelacion" class="modal-confirmacion">
+  <p>¿Querés cancelar la reserva de <b>{{ reservaSeleccionada.nombre }} {{ reservaSeleccionada.apellido }}</b>?</p>
+
+  <div class="modal-botones">
+    <button class="btn-cancelar" (click)="confirmarCancelacion('momentanea')">🕒 Solo por esta vez</button>
+    <button class="btn-cancelar" (click)="confirmarCancelacion('permanente')">❌ Cancelar permanentemente</button>
+    <button class="btn-cerrar" (click)="cerrarModalTipoCancelacion()">🚫 Cerrar</button>
+  </div>
+</div>
+
+<!-- NUEVO modal de confirmación final -->
+<div *ngIf="mostrarModalConfirmarAccion" class="modal-confirmacion">
+  <p *ngIf="tipoCancelacionSeleccionado === 'momentanea'">
+    ¿Querés cancelar la reserva del día <b>{{ turnoSeleccionado?.fecha }}</b>?
+  </p>
+  <p *ngIf="tipoCancelacionSeleccionado === 'permanente'">
+    ¿Querés cancelar permanentemente la reserva de <b>{{ reservaSeleccionada.nombre }} {{ reservaSeleccionada.apellido }}</b>?
+  </p>
+
+  <div class="modal-botones">
+    <button class="btn-confirmar" (click)="aceptarCancelacion()">✅ Sí, cancelar</button>
+    <button class="btn-cerrar" (click)="cerrarConfirmacion()">❌ No</button>
+  </div>
+</div>
+
+
+
+
+
+

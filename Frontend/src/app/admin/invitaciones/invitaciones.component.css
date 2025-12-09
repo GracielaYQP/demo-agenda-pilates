@@ -1,0 +1,238 @@
+/* Contenedor principal horizontal */
+.registro-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  height: calc(100vh - 36px - 48px);
+  padding: 0 20px;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.singin-container {
+  width: 50%;
+  max-width: 350px; /* AHORA SOLO AFECTA AL ESCRITORIO */
+  background-color: rgba(255, 255, 255);
+  background-blend-mode: lighten;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  max-height: 90vh;
+  margin: 0;
+}
+
+/* Título */
+.titulo-registro {
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  color: #333;
+  margin: 8px 0 0 0;
+}
+
+/* Estilo para los campos de entrada */
+input {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 6px;
+  width: 100%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 8px;
+  background-color: #F5F5F5;
+}
+
+#registro_alumnos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.text-danger {
+  color: #d32f2f;
+  font-size: 12px;
+  margin: 2px 0 0 4px;
+  font-weight: bold;
+}
+
+.alert-error {
+  color: #d32f2f;
+  font-weight: bold;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.botonera-horizontal {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.botonera-horizontal button {
+  width: 160px;
+  padding: 10px 0;
+  text-align: center;
+}
+/* Botón fucsia */
+.btn-singin {
+  background-color: #B53490;
+  color: white;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+  width: auto;
+  text-align: center;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Hover más oscuro */
+.btn-singin:hover {
+  background-color: #af1155;
+  color: black;
+}
+
+.btn-cerrar {
+  background-color: #a8a6a6;
+  color: #333;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+  width: 70%;
+  text-align: center;
+  display: block;
+  margin: 0 auto;
+}
+
+.btn-cerrar:hover {
+  background-color: #535353;
+  color: white;
+}
+
+select {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 6px;
+  width: 100%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 8px;
+  background-color: #f5f5f5;
+}
+
+/* Ajusta alerta de éxito y link generado */
+.alert-success {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 16px auto;
+  width: 80%;
+}
+
+.alert-link {
+  background-color: #f9f9f9;
+  border: 1px dashed #999;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 16px auto;
+  width: 80%;
+  text-align: center;
+}
+
+.alert-link code {
+  display: block;
+  background: #eee;
+  padding: 6px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* ------------------- MEDIA QUERIES ------------------- */
+
+/* Tabletas y dispositivos medianos (769px a 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .singin-container {
+    width: 60%;
+    max-width: 400px;
+  }
+}
+
+/* Teléfonos y tabletas pequeñas (hasta 768px) */
+@media (max-width: 768px) {
+  .registro-wrapper {
+    flex-direction: column;
+    height: auto;
+    padding: 20px 10px;
+    margin: 20px auto; /* Centrar el wrapper en pantallas pequeñas */
+  }
+
+  .singin-container {
+    width: 95%; /* Ocupa casi todo el ancho disponible */
+    max-width: 400px; /* PERO con un límite para que no sea inmensamente ancho en tablets */
+    padding: 15px;
+    margin: 0 auto; /* Centrar el contenedor del formulario */
+  }
+  
+  .titulo-registro {
+    font-size: 1.5rem;
+  }
+
+  .button-group {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .button-group .btn-singin {
+    width: 90%;
+  }
+}
+
+/* Dispositivos móviles muy pequeños (hasta 480px) */
+@media (max-width: 480px) {
+  .singin-container {
+    width: 95%; /* Mantiene un buen ancho para móviles */
+    max-width: 350px; /* Limita el ancho máximo para evitar que se vea muy ancho */
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 10px;
+  }
+
+  .button-group {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .button-group .btn-singin {
+    width: 100%;
+  }
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="256" height="256" viewBox="0 0 256 256" xml:space="preserve">
+<g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;" transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
+	<path d="M 85.033 0 H 4.968 C 2.224 0 0 2.223 0 4.967 v 80.065 C 0 87.775 2.224 90 4.968 90 h 80.065 C 87.775 90 90 87.776 90 85.032 V 4.967 C 90 2.223 87.776 0 85.033 0 z M 60.579 24.96 l -5.648 0.002 c -4.428 0 -5.286 2.104 -5.286 5.193 v 6.81 h 10.562 l -1.376 10.666 h -9.186 V 75 H 38.631 V 47.631 h -9.21 V 36.965 h 9.21 v -7.866 C 38.631 19.971 44.206 15 52.349 15 c 3.901 0 7.253 0.29 8.23 0.42 V 24.96 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;" transform=" matrix(1 0 0 1 0 0) " stroke-linecap="round"/>
+</g>
+</svg>

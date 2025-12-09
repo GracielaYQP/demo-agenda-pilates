@@ -1,0 +1,393 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.login-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center; 
+  padding: 0 20px;
+  box-sizing: border-box;
+  margin: 20px 0 0 0;
+  height: calc(100vh - 36px - 48px);
+  margin-bottom: 40px; 
+} 
+
+.input_login {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 5px;
+  width: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+.espacio_5px {
+  height: 10px;
+  width: 60%;
+}
+.mi_clase{
+  display: block;
+  align-items: center;
+}
+
+/* Título */
+.titulo-login {
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  color: #333;
+  margin: 8px 0 0 0;
+}
+
+/*formulario */
+.singin-container {
+  width: 400px;
+  max-width: 100%;          
+  background-color: rgba(255,255,255); 
+  background-blend-mode: lighten;          
+  padding: 20px;              
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);        
+  margin: 0 auto;
+  overflow-y: visible;   /* permite crecer sin forzar scroll */
+  overflow-x: hidden;    /* evita scroll lateral */
+  max-height: none;            
+}
+
+/* Estilo para los encabezados */
+h2 {
+  color: #333;
+  margin-bottom: 20px; 
+}
+
+/* Estilo para los campos de entrada */
+input {
+  border: 1px solid #ccc; 
+  border-radius: 5px; 
+  padding: 6px; 
+  width: 100%; 
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); 
+  margin-bottom: 8px;
+  background-color: #f5f5f5; 
+}
+
+button {
+  max-width: 100%;
+}
+
+#login_alumnos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.text-danger {
+  color: red;
+  font-size: 12px;
+  margin: 2px 0 0 4px;
+}
+/* Botón fucsia */
+.btn-singin {
+  background-color: #B53490;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+  width: 70%;
+  text-align: center;
+  display: block;
+  margin: 0 auto; 
+}
+
+/* Hover más oscuro */
+.btn-singin:hover {
+  background-color: #af1155;
+  color: black;
+}
+
+/* Centrado */
+.center-button {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.form-footer {
+  background-color: #b4b6b9; 
+  margin-top: 10px;
+  padding: 12px;               
+  border-radius: 8px;         
+  text-align: center;
+  display: flex;              
+  flex-direction: column;
+  gap: 10px;                   
+}
+
+.form-footer p {
+  margin: 0;                   
+  font-size: 14px;
+  color: #000;              
+}
+
+.form-footer .btn-singin {
+  margin: 0 auto;              
+  border-radius: 8px;          
+  padding: 10px 16px;
+  font-weight: 600;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.alert-error {
+  color: red;
+  font-weight: bold;
+  background-color: #ffe6e6;
+  border: 1px solid #ff4d4d;
+  padding: 10px;
+  border-radius: 6px;
+  margin: 16px auto;
+  width: 80%;
+  text-align: center;
+}
+
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  flex: 1;
+  padding-right: 2rem;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #555;
+}
+.mensaje-error {
+  font-size: 1.2rem;  
+  font-weight: bold;
+  text-align: center;
+}
+
+.invite-callout {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff5fb;
+  border: 1px solid #f1c6e6;
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  animation: fadeIn .25s ease-out, pulse 2.2s ease-in-out infinite;
+}
+
+.callout-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #b53490;
+  margin-bottom: 6px;
+}
+
+.dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #b53490;
+  box-shadow: 0 0 0 0 rgba(181,52,144,.6);
+  animation: dotPulse 2s infinite;
+}
+
+.invite-callout p { margin: 0 0 10px; color: #5a2c4d; }
+
+.wa-button {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  background: #25d366;
+  color: white;
+  font-weight: 700;
+}
+
+.login-error { margin-top: 10px; color: #b00020; font-weight: 600; }
+
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(181,52,144,.18)} 70%{box-shadow:0 0 0 10px rgba(181,52,144,0)} 100%{box-shadow:0 0 0 0 rgba(181,52,144,0)} }
+@keyframes dotPulse { 0%{transform:scale(1);opacity:1} 50%{transform:scale(1.2);opacity:.8} 100%{transform:scale(1);opacity:1} }
+
+
+@media (max-width: 768px) {
+  .login-wrapper {
+    flex-direction: column;
+    height: auto;
+    padding: 20px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .singin-container {
+    width: 100%;
+    margin-top: 20px;
+    background-position: center 50%;
+  }
+
+  .btn-singin {
+    width: 90%; 
+  }
+
+  .form-footer {
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .form-footer p {
+    font-size: 13px;
+  }
+
+  .form-footer .btn-singin {
+    width: 100%;         
+    font-size: 14px;
+  }
+
+  .invite-callout {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+  }
+
+  .callout-header {
+    gap: 6px;
+    font-size: 1rem; 
+  }
+
+  .invite-callout p {
+    font-size: .95rem;
+    line-height: 1.35;
+  }
+
+  .wa-button {
+    display: block;      
+    width: 100%;
+    text-align: center;
+    padding: 12px 14px;
+    font-size: 1rem;
+  }
+}
+
+
+@media (max-width: 480px) {
+
+  .login-wrapper {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .titulo-login {
+    font-size: 1.5rem;
+  }
+
+  .form-footer {
+    font-size: 12px;
+  }
+
+  .mensaje-error {
+    font-size: 1rem;
+  }
+
+  input {
+    font-size: 1rem;
+    padding: 8px;
+  }
+
+  .btn-singin {
+    font-size: 1rem;
+    padding: 10px;
+  }
+
+   .login-wrapper {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    padding: 0 10px;
+    width: 100%;
+    padding: 0 10px;
+  }
+
+  .singin-container {
+
+    width: 95%;
+    max-width: 350px;
+    margin: 25px auto 0 auto;
+  }
+
+  .btn-singin {
+    width: 100%;
+  }
+
+    .form-footer {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .form-footer p {
+    font-size: 12px;
+  }
+
+  .form-footer .btn-singin {
+    width: 100%;        
+    padding: 12px;
+    font-size: 13px;
+  }
+
+    .invite-callout {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .callout-header {
+    font-size: .95rem;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+  }
+
+  .invite-callout p {
+    font-size: .9rem;
+    margin-bottom: 8px;
+  }
+
+  .wa-button {
+    padding: 11px 12px;
+    font-size: .95rem;
+    border-radius: 8px;
+  }
+
+}

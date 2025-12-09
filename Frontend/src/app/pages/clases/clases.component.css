@@ -1,0 +1,130 @@
+.parallax-section {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 20px;
+}
+
+.parallax-background {
+  background-attachment: fixed; 
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+} 
+
+.parallax-content {
+  position: relative;
+  z-index: 2; /* Encima de la imagen */
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  width: calc(100% - 36px); 
+}
+
+.parallax-content p, li {
+  font-size: 1rem;
+  line-height: 1.6;
+  text-align: justify;
+  text-justify: inter-word;   /* hace que se vea más prolijo */
+}
+
+.text-block {
+  background-color: rgba(236, 234, 234, 0.8);
+  padding: 40px;
+  margin-bottom: 40px;
+  border-radius: 10px;
+}
+
+.text-block p, li {
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+
+.volver-inicio {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.volver-inicio button {
+  background-color: rgba(236, 234, 244, 0.8);
+  color: #b53490;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.volver-inicio button:hover {
+  color:black;
+}
+
+
+/* =====================================
+   Media Queries para Tablets y Móviles
+   ===================================== */
+
+/* Estilos para pantallas de hasta 768px (Tablets) */
+@media (max-width: 768px) {
+  .parallax-section {
+    padding: 60px 15px;
+  }
+  
+  .parallax-background {
+    /* El efecto 'fixed' puede causar problemas en móviles, lo cambiamos a 'scroll' */
+    background-attachment: scroll; 
+  }
+  
+  .parallax-content {
+    padding: 30px 15px;
+  }
+  
+  .text-block {
+    padding: 30px;
+    margin-bottom: 30px;
+  }
+
+
+  .parallax-content h1 {
+    font-size: 1.3rem;
+  }
+
+}
+
+/* Estilos para pantallas de hasta 480px (Celulares) */
+@media (max-width: 480px) {
+  .parallax-section {
+    padding: 40px 10px;
+  }
+
+  .parallax-content {
+    padding: 20px 10px;
+  }
+  
+  .text-block {
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .parallax-content h1 {
+    font-size: 1.2rem;
+  }
+  .parallax-content p, li {
+    font-size: 0.95rem;
+    text-align: justify;
+    text-justify: inter-word;
+  }
+}

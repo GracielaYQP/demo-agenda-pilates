@@ -1,0 +1,61 @@
+<header class="site-header">
+  <div class="header-container">
+    <!-- Logo -->
+    <img src="assets/logos/logo.jpg" alt="Logo" class="logo" />
+    
+    <!-- Título + Bienvenida centrados -->
+    <div class="title-container">
+      <h1>Lucía Carletta - Estudio Pilates</h1>
+      <div class="bienvenida" *ngIf="localStorage.getItem('nombreUsuario')">
+        {{ 'Bienvenid@, ' + localStorage.getItem('nombreUsuario') }}
+      </div>
+    </div>
+    <button class="hamburger" (click)="toggleMenu()">☰</button>
+  </div>
+
+  <!-- Fondo oscuro para cerrar menú al hacer clic fuera -->
+  <div class="overlay" *ngIf="menuAbierto" (click)="cerrarMenu()"></div>
+
+  <!-- Menú lateral derecho -->
+  <div class="side-menu" [class.open]="menuAbierto">
+    <ul>
+      <li><a routerLink="/" (click)="cerrarMenu()">Inicio</a></li>
+
+      <ng-container *ngIf="!auth.isLoggedIn() || (auth.isLoggedIn() && !isAdmin)">
+        <li><a routerLink="/acerca-de" (click)="cerrarMenu()">¿Qué es pilates?</a></li>
+        <li><a routerLink="/cv-lucia" (click)="cerrarMenu()">Lucía Carletta</a></li>
+        <li><a routerLink="/clases" (click)="cerrarMenu()">Clases</a></li>
+        <li><a routerLink="/normas-basicas" (click)="cerrarMenu()">Reglamento del Estudio</a></li>
+        <li><a routerLink="/planes" (click)="cerrarMenu()">Planes</a></li>
+      </ng-container>
+
+      <li><a routerLink="/horarios-disponibles" (click)="cerrarMenu()">Horarios disponibles</a></li>
+
+      <ng-container *ngIf="auth.isLoggedIn() && !isAdmin">
+        <li><a routerLink="/gestion-turnos" (click)="cerrarMenu()">Gestionar turnos</a></li>
+        <li><a routerLink="/mis-turnos" (click)="cerrarMenu()">Mis turnos</a></li>
+      </ng-container>
+
+      <ng-container *ngIf="isAdmin">
+        <li><a routerLink="/clases-suspendidas" (click)="cerrarMenu()">Clases Suspendidas</a></li>
+        <li><a routerLink="/dashboard-tabs" (click)="cerrarMenu()">Dashboard</a></li>
+        <li><a routerLink="/admin/invitaciones" (click)="cerrarMenu()">Enviar invitación</a></li>
+        <li><a routerLink="/gestion-turnos" (click)="cerrarMenu()">Gestionar turnos</a></li>
+        <li><a routerLink="/listar-alumnos" (click)="cerrarMenu()">Listado de alumnos</a></li> 
+        <li><a routerLink="/valor-planes" (click)="cerrarMenu()">Valor de los Planes</a></li>
+      </ng-container>
+
+      <ng-container *ngIf="!auth.isLoggedIn()">
+        <li><a routerLink="/register" (click)="cerrarMenu()">Registrarse</a></li>
+        <li><a routerLink="/login" (click)="cerrarMenu()">Ingresar</a></li>
+      </ng-container>
+
+      <ng-container *ngIf="auth.isLoggedIn()">
+        <li><a (click)="logout()" class="logout">Cerrar sesión</a></li>
+      </ng-container>
+    </ul>
+  </div>
+</header>
+
+
+

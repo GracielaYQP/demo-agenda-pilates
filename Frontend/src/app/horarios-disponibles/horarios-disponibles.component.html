@@ -1,0 +1,86 @@
+<div class="table-container" *ngIf="horarios.length > 0" translate="no">
+  <h2>Horarios Disponibles</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Horario</th>
+        <th *ngFor="let dia of dias">
+          <div >{{ dia.split(' ')[0] }}</div>
+          <div >{{ dia.split(' ')[1] }}</div>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let hora of horas">
+        <td class="hora-columna">{{ hora }}</td>
+        <td *ngFor="let dia of dias">
+          <ng-container [ngSwitch]="estadoCierre(dia, hora)">
+            <!-- ✅ Abierto (celda normal) -->
+            <ng-container *ngSwitchCase="'ninguno'">
+              <!-- Si HAY cupos: celda normal (clickeable si corresponde) -->
+              <ng-container *ngIf="isDisponible(dia, hora, getNivelParaHorario(dia, hora)); else sinCupoTpl">
+                <div
+                  [ngClass]="[
+                    nivelCss(getNivelParaHorario(dia, hora)),
+                    isClickable(dia, hora, getNivelParaHorario(dia, hora)) ? 'clickeable' : '',
+                    false ? 'no-disponible' : ''
+                  ]"
+                  (click)="isClickable(dia, hora, getNivelParaHorario(dia, hora))
+                            ? reservar(dia, hora, getNivelParaHorario(dia, hora))
+                            : null"
+                >
+                  <span class="nivel">{{ getNivelParaHorario(dia, hora) }}</span>
+                  <span class="reformers">
+                    Reformers libres: {{ getDisponibles(dia, hora, getNivelParaHorario(dia, hora)) }}
+                  </span>
+                  <span *ngIf="getNivelParaHorario(dia, hora) === 'No disponible'">No disponible</span>
+                </div>
+              </ng-container>
+
+              <!-- Si NO hay cupos: bloquear y pintar como feriado/ausencia -->
+              <ng-template #sinCupoTpl>
+                <div
+                  class="no-disponible feriado feriado-con-tip"
+                  title="Sin cupos disponibles."
+                  role="note"
+                  aria-label="Sin reformers libres."
+                >
+                  <span class="feriado-label">Sin reformers libres</span>
+                </div>
+              </ng-template>
+            </ng-container>
+
+            <!-- Ausencia de la profe -->
+            <ng-container *ngSwitchCase="'ausencia'">
+              <div
+                class="no-disponible feriado feriado-con-tip"
+                title="Estudio cerrado. Se acredita recuperación."
+                role="note"
+                aria-label="Estudio cerrado. Se acredita recuperación."
+              >
+                <span class="feriado-label">Estudio cerrado</span>
+                <span class="badge-recupera">Se acredita recuperación</span>
+              </div>
+            </ng-container>
+
+            <!-- ✅ CERRADO FIJO: solo “Estudio cerrado” (sin recuperación) -->
+            <ng-container *ngSwitchCase="'cerrado_fijo'">
+              <div
+                class="no-disponible feriado feriado-con-tip"
+                title="Estudio cerrado."
+                role="note"
+                aria-label="Estudio cerrado."
+              >
+                <span class="feriado-label">Estudio cerrado</span>
+                <!-- Sin badge de recuperación -->
+              </div>
+            </ng-container>
+          </ng-container>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="snackbar" *ngIf="mostrarMensajeActualizacion">
+    ✅ Horarios actualizados
+  </div>
+</div>

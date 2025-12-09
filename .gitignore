@@ -1,0 +1,63 @@
+# ======================
+# Node / Angular general
+# ======================
+node_modules/
+dist/
+tmp/
+temp/
+.cache/
+.angular/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Frontend Angular
+Frontend/dist/
+Frontend/.angular/
+Frontend/node_modules/
+
+# Backend (NestJS)
+backend/dist/
+backend/node_modules/
+
+# ======================
+# Android Studio / Gradle
+# ======================
+*.iml
+.gradle/
+local.properties
+.idea/
+*.apk
+*.ap_
+*.aab
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.dex
+*.class
+
+# Android Studio generated
+.DS_Store
+out/
+
+# ======================
+# VSCode / Editor configs
+# ======================
+.vscode/
+*.swp
+*.swo
+
+# ======================
+# OS files
+# ======================
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+.DS_Store
+
+# ======================
+# GitHub Pages deploy
+# ======================
+docs/

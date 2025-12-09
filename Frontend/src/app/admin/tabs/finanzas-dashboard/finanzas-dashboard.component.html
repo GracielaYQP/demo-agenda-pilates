@@ -1,0 +1,138 @@
+<div class="wrap">
+  <form class="filtros" [formGroup]="form">
+    <label>
+      Mes
+      <select formControlName="mes">
+        <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [value]="m">{{m}}</option>
+      </select>
+    </label>
+    <label>
+      Año
+      <input formControlName="anio" type="number" min="2020" max="2100"/>
+    </label>
+  </form>
+
+  <div *ngIf="loading()" class="loading">Cargando...</div>
+  <div *ngIf="errorMsg()" class="error">{{ errorMsg() }}</div>
+
+  <!-- Tarjetas resumen -->
+  <div class="cards" *ngIf="resumen() as r">
+    <div class="card">
+      <p class="kpi-title">Ingresos del mes</p>
+      <p class="kpi-value">${{ r.ingresosTotalesARS | number }}</p>
+    </div>
+    <div class="card">
+      <p class="kpi-title">Pagos registrados</p>
+      <p class="kpi-value">{{ r.pagosCount }}</p>
+    </div>
+
+    <div class="card" *ngIf="deudores() as d">
+      <p class="kpi-title">Deudores</p>
+      <p class="kpi-value">{{ d.totalDeudores }}</p>
+      <p class="kpi-sub">${{ d.totalAdeudadoARS | number }}</p>
+    </div>
+    <div class="card">
+      <h3>Ingresos por plan</h3>
+      <div class="bars">
+        <div class="bar" *ngFor="let kv of (r.porPlan | keyvalue)"
+             [style.--pct]="(kv.value && r.ingresosTotalesARS ? (kv.value / r.ingresosTotalesARS)*100 : 0)">
+          <span class="bar-label">{{ kv.key }}</span>
+          <span class="bar-fill"></span>
+          <span class="bar-value">${{ kv.value | number }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- “Gráficos” livianos sin libs -->
+  <div class="charts" *ngIf="resumen() as r">
+        <!-- Panel: Cobros del mes (detalle) -->
+    <div class="panel" *ngIf="resumen() as r">
+      <h3>Cobros del mes</h3>
+      <p class="kpi-sub" style="margin-top:0">Total: ${{ r.ingresosTotalesARS | number }} — Registros: {{ r.pagosCount }}</p>
+      <div class="table-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Apellido</th>
+              <th>Nombre</th>
+              <th>Fecha</th>
+              <th>Plan</th>
+              <th>Método</th>
+              <th style="text-align:right;">Monto (ARS)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let i of r.items">
+              <td>{{ i.apellido }}</td>
+              <td>{{ i.nombre }}</td>
+              <td>{{ i.fechaPago | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ i.planTipo }}</td>
+              <td>{{ i.metodo || '-' }}</td>
+              <td style="text-align:right;">{{ i.montoARS | number }}</td>
+            </tr>
+
+            <tr *ngIf="!r.items.length">
+              <td colspan="6" class="empty">No hay cobros registrados en el período.</td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="r.items.length">
+            <tr>
+              <th colspan="5" style="text-align:right;">Total</th>
+              <th style="text-align:right;">${{ r.ingresosTotalesARS | number }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+
+  <!-- Tabla de deudores -->
+  <div class="panel" *ngIf="deudores() as d">
+    <h3>Listado de deudores</h3>
+    <div class="table-scroll">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Alumno</th>
+            <th>Plan</th>
+            <th>Monto (ARS)</th>
+            <th>Último pago</th>
+            <th>Días atraso</th>
+            <th>Estado</th>
+            <th>Contacto</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let i of d.items" [class.atrasado]="i.estado==='Atrasado'">
+            <td>{{ i.alumno }}</td>
+            <td>{{ i.plan }}</td>
+            <td>{{ i.montoMensual | number }}</td>
+            <td>{{ i.ultimaFechaPago ? (i.ultimaFechaPago | date: 'dd/MM') : '-' }}</td>
+            <td>{{ i.diasAtraso }}</td>
+            <td>{{ i.estado }}</td>
+            <td class="acciones">
+              <a *ngIf="i.contactos.whatsapp" [href]="i.contactos.whatsapp" target="_blank">WhatsApp</a>
+            </td>
+            <td>
+              <button class="btn-registrar" (click)="abrirPagoDesdeDeudor(i)">Registrar pago</button>
+            </td>
+          </tr>
+          <tr *ngIf="!d.items.length">
+            <td colspan="8" class="empty">No hay deudores en el período.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<app-pagos
+  *ngIf="showPagoModal"
+  [alumno]="modalAlumno!"
+  [estado]="modalEstado!"
+  [mes]="mesActual"
+  [anio]="anioActual"
+  (confirmar)="confirmarPago($event)"
+  (eliminar)="eliminarPago($event)"
+  (cerrar)="cerrarModal()">
+</app-pagos>

@@ -1,0 +1,29 @@
+<form class="filtros" [formGroup]="form">
+  <label>Mes <select formControlName="mes">
+    <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [value]="m">{{m}}</option>
+  </select></label>
+  <label>Año <input type="number" formControlName="anio"></label>
+</form>
+
+<div *ngIf="loading()" class="loading">Cargando…</div>
+<div *ngIf="error()" class="error">{{error()}}</div>
+
+<div *ngIf="data() as d">
+  <div class="cards">
+    <div class="card"><p class="kpi-title">Clases dictadas</p><p class="kpi-value">{{d.clasesDictadas}}</p></div>
+    <div class="card"><p class="kpi-title">Tasa de ocupación</p><p class="kpi-value">{{d.tasaOcupacionPct | number:'1.0-0'}}%</p></div>
+    <div class="card"><p class="kpi-title">Capacidad libre perdida</p><p class="kpi-value">{{d.capacidadLibrePerdida}}</p></div>
+  </div>
+
+  <div class="panel">
+    <h3>Clases más concurridas</h3>
+    <div class="bars">
+      <div class="bar" *ngFor="let h of d.topHorarios" [style.--pct]="h.ocupacionPct">
+        <span class="bar-label">{{h.label}}</span>
+        <span class="bar-fill"></span>
+        <span class="bar-value">{{h.ocupacionPct | number:'1.0-0'}}%</span>
+      </div>
+    </div>
+  </div>
+</div>
+

@@ -1,0 +1,215 @@
+<div class="table-container">
+  <h2>Listado de Alumnos</h2>
+  <div class="filtros-alumnos">
+    <input type="text" [(ngModel)]="filtroApellido" placeholder="Buscar por apellido" />
+    <input type="text" [(ngModel)]="filtroDni" placeholder="Buscar por DNI" />
+    <input type="text" [(ngModel)]="filtroTelefono" placeholder="Buscar por teléfono" />
+    <label class="filtro-checkbox">
+      <input type="checkbox" [(ngModel)]="mostrarInactivos" />
+      Mostrar alumnos inactivos
+    </label>
+    <button class="nuevo-alumno-btn" (click)="irAFormularioRegistro()"> + Nuevo Alumno</button>
+  </div>
+
+
+  <table class="tabla-alumnos">
+    <thead>
+      <tr>
+        <th>Apellido</th>
+        <th>Nombre</th>
+        <th>DNI</th>
+        <th>Teléfono</th>
+        <th>Email</th>
+        <th>Nivel</th>
+        <th>Plan</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let alumno of alumnosFiltrados">
+
+        <td>{{ alumno.apellido }}</td>
+        <td>{{ alumno.nombre }}</td>
+        <td>{{ alumno.dni }}</td>
+        <td>{{ alumno.telefono }}</td>
+        <td>{{ alumno.email }}</td>
+        <td>{{ alumno.nivel }}</td>
+        <td>{{ alumno.planMensual }}</td>
+        <td class="actions-cell">
+          <button class="action-btn calendar-btn" (click)="verAsistencia(alumno.id, alumno.nombre, alumno.apellido)">
+            📅
+          </button>
+          <button
+            class="btn-pago"
+            *ngIf="esPagoVisible(alumno)"
+            [ngClass]="{ 
+              'pago-ok': alumno._pagoMesActual?.isPago, 
+              'pago-pend': !alumno._pagoMesActual?.isPago 
+            }"
+            (click)="abrirPago(alumno)">
+            $
+          </button>
+          <button class="action-btn" title="Historial de pagos"
+                  (click)="verHistorialPagos(alumno)">
+            🧾
+          </button>
+          
+          <button class="action-btn edit-btn" (click)="editarAlumno(alumno.id)">
+            ✏️
+          </button>
+
+          <!-- 🔁 Cambia ícono y acción según el estado -->
+          <button
+            *ngIf="alumno.activo"
+            class="action-btn delete-btn"
+            (click)="inactivarAlumno(alumno.id)"
+            title="Inactivar alumno"
+          >
+            🚫
+          </button>
+          <button
+            *ngIf="!alumno.activo"
+            class="action-btn reactivate-btn"
+            type="button"
+            (click)="onClickReactivar($event, alumno)"
+            title="Reactivar alumno"
+          >
+            ♻️
+          </button>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<!-- MODAL para historial de pagos -->
+<div *ngIf="historialOpen" class="modal-overlay">
+  <div class="modal-content-asistencia" style="max-width: 720px;">
+    <h3>Historial de pagos — {{ historialAlumno?.apellido }} {{ historialAlumno?.nombre }}</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Mes/Año</th>
+          <th>Fecha de pago</th>
+          <th>Plan</th>
+          <th>Monto</th>
+          <th>Método</th>
+          <th>Notas</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of historialPagos">
+          <td>{{ p.mes }}/{{ p.anio }}</td>
+          <td>{{ p.fechaPago | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ p.planTipo }}</td>
+          <td>$ {{ p.montoARS }}</td>
+          <td>{{ p.metodo || '-' }}</td>
+          <td>{{ p.notas || '-' }}</td>
+        </tr>
+
+        <tr *ngIf="!historialPagos.length">
+          <td colspan="6"><em>Sin pagos registrados.</em></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button class="btn-cerrar" (click)="cerrarHistorial()">Cerrar</button>
+  </div>
+</div>
+
+  <!--  MODAL para confirmar inactivación -->
+<div *ngIf="modalConfirmacionInactivo" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Confirmar Inactivación</h3>
+    <p>¿Estás seguro de que querés marcar como inactivo a:</p>
+    <p><strong>{{ alumnoSeleccionadoApellido }}, {{ alumnoSeleccionadoNombre }}</strong>?</p>
+    <button class="btn-confirmar" (click)="confirmarInactivacion()">✅ Sí, inactivar</button>
+    <button class="btn-cerrar" (click)="cerrarModalInactivacion()">Cancelar</button>
+  </div>
+</div>
+<!--  MODAL para confirmar reactivación -->
+<div *ngIf="modalConfirmacionReactivar" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Confirmar Reactivación</h3>
+    <p>¿Querés reactivar a:</p>
+    <p><strong>{{ alumnoSeleccionadoApellido }}, {{ alumnoSeleccionadoNombre }}</strong>?</p>
+    <button class="btn-confirmar" (click)="confirmarReactivacion()">✅ Sí, reactivar</button>
+    <button class="btn-cerrar" (click)="cerrarModalReactivacion()">Cancelar</button>
+  </div>
+</div>
+<!-- Modal asistencia -->
+<div *ngIf="modalAsistencia" class="modal-overlay">
+  <div class="modal-content-asistencia">
+    <h3>
+      Asistencias de<br>
+      <span class="nombre-alumno">{{ asistenciaNombre }} {{ asistenciaApellido }}</span>
+    </h3>
+    <table class=tabla-asistencia>
+      <thead>
+        <tr>
+          <th>Mes</th>
+          <th>Asistidas</th>
+          <th>Recuperadas</th>
+          <th>Canceladas</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let mes of asistenciaMeses">
+          <td>
+            <div>{{ mes }}</div>
+            <div class="sublinea">
+              <em>
+                  Clases asistidas al día de hoy:
+                  {{
+                    (asistenciaData[mes]?.asistidas || 0)
+                    + (asistenciaData[mes]?.recuperadas || 0)
+                    + (asistenciaData[mes]?.sueltas || 0)
+                  }}
+              </em>
+            </div>
+            <div class="sublinea" *ngIf="asistenciaData[mes]?.sueltas">
+              <em>Clases sueltas este mes:
+                {{ asistenciaData[mes]?.sueltas }}
+              </em>
+            </div>
+            <div class="sublinea" *ngIf="!asistenciaData[mes]?.validoRespectoPlan">
+              <span class="text-danger">⚠️ Supera el plan mensual (máx: {{ asistenciaData[mes]?.planMax }})</span>
+            </div>
+          </td>
+          <td>
+            <div><strong>Total:</strong> {{ asistenciaData[mes]?.asistidas ?? 0 }}</div>
+            <div *ngIf="asistenciaData[mes]?.fechasAsistidas?.length">
+              <small *ngFor="let f of asistenciaData[mes].fechasAsistidas">• {{ f }}<br /></small>
+            </div>
+          </td>
+          <td>
+            <div><strong>Total:</strong> {{ asistenciaData[mes]?.recuperadas ?? 0 }}</div>
+            <div *ngIf="asistenciaData[mes]?.fechasRecuperadas?.length">
+              <small *ngFor="let f of asistenciaData[mes].fechasRecuperadas">• {{ f }}<br /></small>
+            </div>
+          </td>
+          <td>
+            <div><strong>Total:</strong> {{ asistenciaData[mes]?.canceladas ?? 0 }}</div>
+            <div *ngIf="asistenciaData[mes]?.fechasCanceladas?.length">
+              <small *ngFor="let f of asistenciaData[mes].fechasCanceladas">• {{ f }}<br /></small>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <button class="btn-cerrar" (click)="cerrarModalAsistencia()">Cerrar</button>
+  </div>
+</div>
+<app-pagos
+  *ngIf="showPagoModal"
+  [alumno]="modalAlumno!"
+  [estado]="modalEstado!"
+  [mes]="mesActual"
+  [anio]="anioActual"
+  (confirmar)="confirmarPago($event)"
+  (eliminar)="eliminarPago($event)"
+  (cerrar)="cerrarModal()">
+</app-pagos>
+
+
+
+

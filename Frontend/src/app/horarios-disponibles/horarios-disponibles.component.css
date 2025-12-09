@@ -1,0 +1,419 @@
+/* ------------------ CONTENEDOR ------------------ */
+.table-container {
+  margin: 40px auto;
+  width: 90%;
+  background: transparent;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+/* ------------------ TÍTULO ------------------ */
+h2 {
+  display: inline-block;
+  padding: 14px 16px;
+  text-transform: uppercase;
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  color: #b53490;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  display: block;
+  width: fit-content;
+  margin: 16px auto 30px auto;
+  border: 2px solid black;
+}
+
+/* ------------------ TABLA ------------------ */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 5px 5px;
+  text-align: center;
+  min-width: 700px;
+}
+
+/* ------------------ ENCABEZADOS ------------------ */
+thead {
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  color: #B53490;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+th {
+  padding: 6px 8px;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  color: #b53490;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  border: 2px solid black;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* ------------------ CELDAS ------------------ */
+td {
+  padding: 2px 3px; 
+}
+
+td > div {
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-weight: bold;
+  box-shadow: inset 0 0 0 1px #ddd;
+  border: 2px solid black;
+  border-width: 1px;
+}
+
+
+tbody tr:hover {
+  background-color: #fdf1f6;
+}
+
+/* ------------------ COLUMNA HORARIO ------------------ */
+.hora-columna {
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  color: #b53490;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+  font-weight: bold;
+  text-align: center;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  border: 2px solid black;
+}
+
+.feriado {
+  background: repeating-linear-gradient(
+    45deg, #eee, #eee 6px, #ddd 6px, #ddd 12px
+  );
+  color: #666;
+  border: 2px dashed #bbb;
+}
+
+/* ------------------ NIVELES ------------------ */
+.basico {
+  background-color: #d4edda;
+}
+
+.intermedio {
+  background-color: #fff3cd;
+}
+
+.avanzado {
+  background-color: #f8d7da;
+}
+
+.no-disponible,
+.sin-turno {
+  background-color: #e2e3e5;
+  color: #6c757d;
+  opacity: 0.6;
+  font-style: italic;
+  border-radius: 6px;
+  font-weight: bold;
+  padding: 8px;
+}
+
+/* ------------------ INTERACTIVO ------------------ */
+.clickeable {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  padding: 8px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.clickeable:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 4px #aaa;
+}
+
+.nivel {
+  font-weight: bold;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.reformers {
+  font-weight: bold;
+  font-size: 13px;
+  white-space: nowrap;
+  word-break: normal;
+}
+/* ------------------ CONTENIDO CELDA ------------------ */
+.basico,
+.intermedio,
+.avanzado {
+  padding: 8px;
+  border-radius: 6px;
+  margin: 2px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+  min-width: 90px;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+/* ------------------ SNACKBAR ------------------ */
+.snackbar {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #4caf50;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  font-size: 16px;
+  animation: fadeInOut 4s ease-in-out;
+  z-index: 1000;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(20px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(20px); }
+}
+
+/* Celda feriado en 2 líneas, compacta */
+.no-disponible.feriado.feriado-con-tip{
+  display: flex !important;
+  flex-direction: column;    /* 👉 apila en 2 renglones */
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 34px;          /* ajustá a gusto: 32–36px */
+  padding: 4px 2px;
+  text-align: center;
+  overflow: visible;
+  pointer-events: none;      /* no clickeable */
+  cursor: default;
+}
+
+/* Línea 1: “Feriado” */
+.feriado-label{
+  font-style: italic;
+  font-weight: bold;
+  opacity: .85;
+  line-height: 1;
+  font-size: .85rem;
+}
+
+/* Línea 2: badge */
+.badge-recupera{
+  display: inline-block;
+  font-size: .70rem;
+  padding: 2px 2px;
+  border-radius: 999px;
+  background: #f8e5a5;
+  color: #523c01;
+  border: 1px solid #ffe69c;
+  white-space: nowrap;
+}
+
+/* Por si el <td> recorta contenido */
+.table-container td .feriado-con-tip{
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cerrado {
+  background: rgba(180,180,180,.35);
+  color: #444;
+  border: 2px dashed #bbb;
+  pointer-events: none;
+  cursor: default;
+}
+
+.cerrado-label { font-style: italic; font-weight: 700; font-size: .85rem; }
+
+
+/* ------------------ RESPONSIVE ------------------ */
+@media screen and (max-width: 768px) {
+
+  .table-container {
+    padding: 0 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    table-layout: auto;
+    word-break: break-word;
+    min-width: 720px;
+    border-spacing: 3px 3px;
+  }
+
+  th {
+    font-size: 0.8rem;
+    padding: 5px 6px;
+  }
+  
+  td {
+    font-size: 0.9rem;
+    padding: 2px;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    letter-spacing: 0.2px;
+    padding: 8px 10px;
+    text-shadow: none;
+    border-width: 1px;
+    margin: 14px auto 30px auto;
+  }
+
+  .celda-turno { min-width: 80px; }
+
+  .hora-columna {
+    font-size: 10px;
+    padding: 2px;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: linear-gradient(to bottom, #ffffff, #dbccd1); 
+  }
+
+    thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 6;
+    background: linear-gradient(to bottom, #ffffff, #dbccd1); /* Asegura que el fondo sea sólido */
+  }
+
+    .table-container h2 {
+    position: sticky;
+    top: 0;                 
+    z-index: 1000;           
+    width: fit-content;    
+    margin: 14px auto 30px auto;            
+    border-width: 1px;    
+    text-align: center;     
+    background: linear-gradient(to bottom, #ffffff, #dbccd1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    padding: 10px 8px;
+  }
+
+  /* ===== Encabezados: día en 1 línea, fecha en 2ª (sin cortes) ===== */
+  thead th > div {
+    display: block;
+    line-height: 1.15;
+    white-space: nowrap;    /* evita que se parta “Miércoles”, etc. */
+    word-break: normal;
+    -webkit-hyphens: manual;
+    hyphens: manual;        /* desactiva partición automática */
+  }
+
+  /* “Horario” siempre en una sola línea */
+  thead th:first-child,
+  .hora-columna {
+    white-space: nowrap;
+  }
+
+  thead th:not(:first-child) {
+    min-width: 110px;     /* ajustá a gusto: 100–120px suele ir bien */
+  }
+
+  .snackbar {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .table-container {
+    padding: 0 6px;
+    margin: 16px auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    letter-spacing: 0.2px;
+    padding: 8px 10px;
+    text-shadow: none;
+    border-width: 1px;
+    margin: 14px auto 30px auto;
+  }
+
+  table {
+    min-width: 640px;
+    table-layout: auto;
+    border-spacing: 2px 2px;
+    font-size: 10px;
+  }
+
+   th {
+    font-size: 0.75rem;
+    padding: 4px 6px;
+  }
+  
+  td {
+    font-size: 0.85rem;
+    padding: 2px;
+  }
+
+  .celda-turno { min-width: 76px; }
+
+  /* ✅ Fija la columna de encabezado al tope */
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  }
+
+  /* ✅ Fija la primera columna (Horario) a la izquierda */
+  thead th:first-child{
+    position: sticky;
+    left: 0;
+    z-index: 6;
+    background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  }
+
+  .hora-columna {
+    font-size: 10px;
+    padding: 2px;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  }
+
+  thead th:not(:first-child) {
+    min-width: 100px;
+  }
+
+  .snackbar {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+}

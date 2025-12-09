@@ -1,0 +1,148 @@
+.parallax-section {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 20px;
+}
+
+.parallax-background {
+  background-attachment: fixed; 
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+} 
+
+.parallax-content {
+  position: relative;
+  z-index: 2; 
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px; 
+}
+
+.text-block {
+  background-color: rgba(236, 234, 234, 0.8);
+  padding: 40px;
+  margin-bottom: 40px;
+  border-radius: 10px;
+}
+
+
+.text-block h1 {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+
+.planes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.plan-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f8f8;
+  border-radius: 8px;
+  padding: 15px 20px;
+  font-size: 18px;
+}
+
+.plan-name {
+  font-weight: bold;
+}
+
+.plan-price {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+}
+
+.transferencia-info {
+  background: #f1e0e0;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+.volver-inicio {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.volver-inicio button {
+  background-color: rgba(236, 234, 244, 0.8);
+  color: #b53490;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.volver-inicio button:hover {
+  color:black;
+}
+
+/* ------- RESPONSIVE ------- */
+
+/* Tablets */
+@media (max-width: 768px) {
+  .planes-container {
+    padding: 25px 15px;
+  }
+
+  .planes-title {
+    font-size: 24px;
+  }
+
+  .plan-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .plan-price {
+    align-self: flex-end;
+  }
+}
+
+/* Móviles */
+@media (max-width: 480px) {
+  .planes-container {
+    padding: 20px 10px;
+  }
+
+  .planes-title {
+    font-size: 22px;
+  }
+
+  .planes-subtitle,
+  .planes-info {
+    font-size: 14px;
+  }
+
+  .plan-item {
+    font-size: 16px;
+    padding: 12px 15px;
+  }
+
+  .logo img {
+    width: 120px;
+  }
+}

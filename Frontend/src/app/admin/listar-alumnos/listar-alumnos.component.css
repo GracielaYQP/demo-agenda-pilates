@@ -1,0 +1,706 @@
+.table-container {
+  margin: 40px auto;
+  max-width: 90%;
+  background: transparent;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+h2 {
+  display: inline-block; /* Para que se ajuste al contenido */
+  padding: 14px 16px;
+  text-transform: uppercase;
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  color: #b53490;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  margin-bottom: 16px;
+  display: block;
+  width: fit-content;
+  margin: 16px auto 16px auto;
+  border: 2px solid black;
+}
+
+.tabla-alumnos {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 5px 5px;
+  text-align: center;
+  min-width: 700px;
+}
+
+.tabla-alumnos thead {
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  color: #B53490;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.tabla-alumnos th {
+  padding: 14px 16px;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  color: #b53490;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  border: 2px solid black;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.tabla-alumnos td {
+  padding: 6px 8px;
+  border: 2px solid black;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  background: white;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .tabla-alumnos {
+    table-layout: fixed;
+    word-break: break-word;
+    min-width: 720px;
+    border-spacing: 6px 6px;
+  }
+
+  .tabla-alumnos th { font-size: .8rem; padding: 8px 10px; }
+  .tabla-alumnos td { font-size: .9rem; padding: 6px 8px; }
+
+  .tabla-alumnos thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  .tabla-alumnos thead th:first-child,
+  .tabla-alumnos tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabla-alumnos {
+    min-width: 820px;
+    table-layout: auto;
+    border-spacing: 6px 6px;
+  }
+
+  .tabla-alumnos th { font-size: .75rem; padding: 6px 8px; }
+  .tabla-alumnos td { font-size: .85rem; padding: 6px 8px; }
+
+  .tabla-alumnos thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  .tabla-alumnos thead th:first-child,
+  .tabla-alumnos tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+}
+
+thead {
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  color: #B53490;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+th {
+  padding: 14px 16px;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  background: linear-gradient(to bottom, #ffffff, #dbccd1);
+  color: #b53490;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  border: 2px solid black;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+td {
+  padding: 6px 8px;
+  border: 2px solid black;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #ddd;
+  background: white;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+tbody tr:hover {
+  background-color: #fdf1f6;
+}
+
+.actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;  /* Más separación entre íconos */
+  justify-content: center;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  margin-right: 8px;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.edit-btn:hover {
+  color: #af1155;
+  transform: scale(1.2);
+}
+
+.delete-btn:hover {
+  color: #c62828;  /* rojo oscuro */
+  transform: scale(1.2);
+}
+
+.filtros-alumnos {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 20px auto;
+  flex-wrap: nowrap;
+  max-width: 800px;
+  align-items: center;
+}
+
+.filtros-alumnos input:not([type="checkbox"]) {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid black;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  font-size: 0.95rem;
+  width: 200px;
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: white;
+  padding: 8px 12px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+.filtro-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background-color: white;
+  border: 2px solid black;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  height: 40px;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 260px; 
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.filtro-checkbox input[type="checkbox"] {
+  flex: 0 0 auto;     
+  width: auto;
+  height: auto;
+  margin: 0;          
+  padding: 0;
+  transform: scale(1.1);
+  accent-color: #b53490;
+}
+
+.filtro-checkbox:focus-within {
+  outline: 2px solid #b53490;
+  outline-offset: 2px;
+}
+
+.nuevo-alumno-btn {
+  white-space: nowrap;              
+  background-color: #b53490;
+  color: white;
+  padding: 10px 24px;               
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: inline-flex;             
+  align-items: center;
+  gap: 12px;                         
+}
+
+.nuevo-alumno-btn:hover {
+  background-color: #af1155;
+  color: black;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 440px;
+  padding: 30px 25px;
+  background: rgba(255, 255, 255, 0.9);
+  background-blend-mode: lighten;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  overflow-y: auto;
+}
+
+.modal-content h3 {
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #b53490;
+  margin-bottom: 20px;
+}
+
+.modal-content p {
+  color: #333;
+  margin-bottom: 10px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.btn-confirmar,
+.btn-cerrar {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+.btn-confirmar {
+  background-color: #B53490;
+  color: white;
+}
+
+.btn-confirmar:hover {
+  background-color: #af1155;
+  color: black;
+}
+
+.btn-cerrar {
+  background-color: #a8a6a6;
+  color: #333;
+}
+
+.btn-cerrar:hover {
+  background-color: #535353;
+  color: white;
+}
+
+.btn-cancelar-toggle {
+  background-color: #B53490;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: bold;
+  width: 100%;
+  margin: 12px 0 6px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-cancelar-toggle:hover {
+  background-color: #af1155;
+  color: black;
+}
+
+.calendar-btn:hover {
+  color: #4CAF50;
+  transform: scale(1.2);
+}
+
+.modal-content-asistencia {
+  width: 96%;
+  max-width: 800px; 
+  padding: 30px 25px;
+  background: rgba(255, 255, 255, 0.95);
+  background-blend-mode: lighten;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: auto;           
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabla-asistencia {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 4px 4px;
+  text-align: center;
+  min-width: 0;              /* 👈 importante: que se adapte al modal */
+}
+
+.tabla-asistencia th,
+.tabla-asistencia td {
+  padding: 6px 8px;
+  border: 1px solid #999;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #ddd;
+  font-size: 0.9rem;
+}
+
+/* Opcional: un poquito más chico en celu */
+@media (max-width: 480px) {
+  .tabla-asistencia th,
+  .tabla-asistencia td {
+    font-size: 0.8rem;
+    padding: 4px 6px;
+  }
+}
+.modal-content-asistencia .sublinea {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.text-danger { color: #b00020; }
+
+.modal-content-asistencia .btn-cerrar {
+  background-color: #a8a6a6;
+  color: #333;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+
+  width: auto;           
+  display: block;        
+  margin: 16px auto 0;  
+}
+
+.btn-pago {
+  font-weight: 700;
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: black !important; 
+}
+
+.pago-ok {
+  background-color: #4CAF50; 
+  border-color: #4CAF50;
+}
+
+.pago-pend {
+  background-color: #E53935; 
+  border-color: #E53935;
+}
+
+@media (max-width: 768px) {
+  .table-container {
+    padding: 0 8px;
+    overflow-x: auto;                 
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filtros-alumnos {
+    flex-wrap: wrap;
+    gap: 10px;
+    max-width: 100%;
+  }
+
+  .filtros-alumnos input {
+    flex: 1 1 48%;
+    min-width: 0;
+    font-size: .95rem;
+  }
+
+  .filtro-checkbox {
+    min-width: auto;
+    height: auto;
+    padding: 8px 10px;
+    gap: 6px;
+    font-size: .95rem;
+    line-height: 1.2;
+  }
+
+  .nuevo-alumno-btn {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+
+  table {
+    table-layout: fixed;
+    word-break: break-word;
+    min-width: 720px;                 
+    border-spacing: 6px 6px;         
+  }
+
+  th { font-size: .8rem; padding: 8px 10px; }
+  td { font-size: .9rem; padding: 6px 8px; }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+
+  thead th:first-child,
+  tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+
+}
+
+@media (max-width: 480px) {
+ .table-container {
+    padding: 0 6px;
+    margin: 16px auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    letter-spacing: .2px;
+    padding: 8px 10px;
+    text-shadow: none;
+    border-width: 1px;
+    margin: 10px auto;
+  }
+
+  .filtros-alumnos {
+    max-width: 100%;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 0 6px;
+  }
+
+  .filtros-alumnos input {
+    flex: 1 1 100%;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: .9rem;
+  }
+
+  .nuevo-alumno-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: .95rem;
+  }
+
+  table {
+    min-width: 820px;                
+    table-layout: auto;
+    border-spacing: 6px 6px;
+  }
+
+  th { font-size: .75rem; padding: 6px 8px; }
+  td { font-size: .85rem; padding: 6px 8px; }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+
+  thead th:first-child,
+  tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    /* el <th> conserva tu gradiente por la regla base,
+       el <td> ya es blanco por tu regla base */
+  }
+
+  .actions-cell { gap: 10px; }
+  .action-btn   { font-size: 20px; margin-right: 0; }
+  .filtros-alumnos { gap: 8px; }
+
+  .filtros-alumnos input:not([type="checkbox"]),
+  .filtro-checkbox,
+  .nuevo-alumno-btn {
+    flex: 1 1 100%;
+    min-width: 0;                    
+    width: 100%;
+  }
+
+  .nuevo-alumno-btn { justify-content: center; }
+}
+/* ====== FORZAR que la tabla del modal NO sea sticky ====== */
+
+.modal-content-asistencia .tabla-asistencia {
+  table-layout: auto;
+  min-width: 0 !important;   /* que no herede min-width grandes */
+}
+
+/* Quitar sticky de encabezados y primera columna dentro del modal */
+.modal-content-asistencia .tabla-asistencia thead th,
+.modal-content-asistencia .tabla-asistencia tbody td:first-child {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  z-index: auto !important;
+}
+/* ===== VISTA MOBILE DEL MODAL DE ASISTENCIAS ===== */
+@media (max-width: 768px) {
+
+  /* el modal ocupa casi todo el ancho y sin scroll horizontal */
+  .modal-content-asistencia {
+    max-width: 95%;
+    overflow-x: hidden;
+  }
+
+  /* la tabla se comporta más como una lista de tarjetas */
+  .modal-content-asistencia .tabla-asistencia {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    min-width: 0;
+  }
+
+  /* oculto el header (Mes / Asistidas / Recuperadas / Canceladas),
+     porque ya está “etiquetado” dentro de cada celda */
+  .modal-content-asistencia .tabla-asistencia thead {
+    display: none;
+  }
+
+  /* cada fila = una tarjeta por mes */
+  .modal-content-asistencia .tabla-asistencia tr {
+    display: block;
+    margin-bottom: 12px;
+    border: 1px solid #999;
+    border-radius: 10px;
+    background: #fff;
+    padding: 8px 10px;
+  }
+
+  /* cada celda ocupa todo el ancho, una debajo de la otra */
+  .modal-content-asistencia .tabla-asistencia td {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid #eee;
+    padding: 6px 4px;
+    white-space: normal;      /* permite que el texto salte de renglón */
+    position: static !important;  /* anulamos cualquier sticky heredado */
+    left: auto !important;
+    top: auto !important;
+    z-index: auto !important;
+  }
+
+  /* la última celda de la tarjeta sin línea abajo */
+  .modal-content-asistencia .tabla-asistencia td:last-child {
+    border-bottom: none;
+  }
+
+  /* opcional: título de mes centrado y fuerte */
+  .modal-content-asistencia .tabla-asistencia td:first-child {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+   /* Etiquetas de cada “cajita” usando ::before */
+  .modal-content-asistencia .tabla-asistencia tr td:nth-child(2)::before {
+    content: 'ASISTIDAS';
+    display: block;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #b53490;
+    margin-bottom: 2px;
+    text-align: left;
+  }
+
+  .modal-content-asistencia .tabla-asistencia tr td:nth-child(3)::before {
+    content: 'RECUPERADAS';
+    display: block;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #b53490;
+    margin-bottom: 2px;
+    text-align: left;
+  }
+
+  .modal-content-asistencia .tabla-asistencia tr td:nth-child(4)::before {
+    content: 'CANCELADAS';
+    display: block;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #b53490;
+    margin-bottom: 2px;
+    text-align: left;
+  }
+}
+.modal-content-asistencia h3 {
+  line-height: 1.3;
+  text-align: center;
+}
+
+.modal-content-asistencia h3 .nombre-alumno {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #b53490;
+  display: block;
+  margin-top: 4px;
+  text-align: center;
+}
+

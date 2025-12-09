@@ -1,0 +1,55 @@
+<div class="modal-overlay">
+  <div class="modal-content modal-content-pagos">
+    <h3 class="modal-title">Pago de {{ alumno.apellido }} {{ alumno.nombre }}</h3>
+
+    <!-- Caso ya está pago y no está en modo edición -->
+    <ng-container *ngIf="estado?.isPago && !modoEdicion; else formularioPago">
+      <div class="detalle">
+        <p><b>Estado:</b> Pagado</p>
+        <p><b>Fecha de pago:</b> {{ estado?.pago?.fechaPago | date:'dd/MM/yyyy HH:mm' }}</p>
+        <p><b>Plan:</b> {{ estado?.pago?.planTipo }}</p>
+        <p><b>Monto:</b> $ {{ estado?.pago?.montoARS }}</p>
+        <p><b>Método:</b> {{ estado?.pago?.metodo || '-' }}</p>
+        <p><b>Notas:</b> {{ estado?.pago?.notas || '-' }}</p>
+      </div>
+
+      <div class="acciones">
+        <button class="btn" (click)="modoEdicion = true">Editar</button>
+        <button class="btn btn-danger" (click)="onEliminar()">Eliminar</button>
+        <button class="btn btn-cerrar" (click)="cerrar.emit()">Cerrar</button>
+      </div>
+    </ng-container>
+
+    <!-- Formulario (registrar nuevo o editar existente) -->
+    <ng-template #formularioPago>
+      <form [formGroup]="form" (ngSubmit)="onConfirmar()">
+        <div class="grid">
+          <label>Plan</label>
+          <input type="text" formControlName="planTipo" readonly class="readonly"/>
+
+          <label>Monto (ARS)</label>
+          <input type="number" formControlName="montoARS" readonly class="readonly"/>
+
+          <label>Método</label>
+          <select formControlName="metodo">
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="mercado_pago">Mercado Pago</option>
+            <option value="otro">Otro</option>
+          </select>
+
+          <label>Notas</label>
+          <textarea rows="3" formControlName="notas" placeholder="Opcional"></textarea>
+        </div>
+
+        <div class="acciones">
+          <button class="btn-confirmar" type="submit" [disabled]="form.invalid">
+            {{ estado?.isPago ? 'Guardar cambios' : 'Confirmar pago' }}
+          </button>
+          <button class="btn-cerrar" type="button" (click)="cerrar.emit()">Cerrar</button>
+        </div>
+      </form>
+    </ng-template>
+  </div>
+</div>
+

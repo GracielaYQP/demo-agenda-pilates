@@ -1,0 +1,52 @@
+# ------------------------------
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# ------------------------------
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# ------------------------------
+# Angular
+.angular/
+.sass-cache/
+/connect.lock
+/coverage
+/typings
+
+# ------------------------------
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# ------------------------------
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ------------------------------
+# Logs and temporary
+testem.log
+/libpeerconnection.log
+
+# ------------------------------
+# System files
+.DS_Store
+Thumbs.db
+
+# ------------------------------
+# Historial (si no querés guardar el plugin .history de VSCode)
+.history/*

@@ -1,0 +1,299 @@
+/* Estilos base y generales */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Estilos de la página de registro */
+
+.registro-wrapper {
+  min-height: calc(100dvh - var(--header-h, 96px) - var(--footer-h, 120px));
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+} 
+
+.singin-container {
+  width: 50%;
+  max-width: 400px;
+  background-color: rgba(255,255,255);
+  background-blend-mode: lighten;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  overflow-x: hidden;
+  overflow-y: visible;
+  max-height: none;
+  margin: 0;
+  
+}
+
+.titulo-registro {
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  color: #333;
+  margin: 8px 0 0 0;
+}
+
+#registro_alumnos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.input_registro, input, select {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 6px;
+  width: 100%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 8px;
+  background-color: #f5f5f5;
+}
+
+.text-danger {
+  color: red;
+  font-size: 12px;
+  margin: 2px 0 0 4px;
+}
+
+.btn-singin {
+  background-color: #B53490;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+  width: 70%;
+  text-align: center;
+  display: block;
+  margin: 0 auto;
+}
+
+.btn-singin:hover {
+  background-color: #af1155;
+  color: black;
+}
+
+.btn-cerrar {
+  background-color: #a8a6a6;
+  color: #333;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+  width: 70%;
+  text-align: center;
+  display: block;
+  margin: 0 auto;
+}
+
+.btn-cerrar:hover {
+  background-color: #535353;
+  color: white;
+}
+
+.botonera-horizontal {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.botonera-horizontal button {
+  width: 160px;
+  display: inline-block;
+  padding: 10px 0;
+  text-align: center;
+}
+
+.alert-success {
+  color: green;
+  font-weight: bold;
+  margin-top: 20px;
+}
+
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.password-wrapper .toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+/* Estilos del modal (no invitación) */
+
+/* El overlay se encarga de cubrir toda la pantalla y centrar el modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; 
+  padding-top: calc(120px + env(safe-area-inset-top));   
+  padding-bottom: calc(140px + env(safe-area-inset-bottom)); 
+  padding-left: 16px;
+  padding-right: 16px;
+  z-index: 10000;
+  overflow-y: auto;
+  cursor: pointer; 
+}
+
+/* El contenedor del modal recibe los estilos visuales */
+.no-invitacion-container {
+  width: 80%;
+  max-width: 400px;
+  background: #fff;
+  padding: 30px;             
+  border-radius: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,.1);
+  text-align: center;
+  position: relative;
+  max-height: none;
+  overflow: visible;
+  margin: 24px auto;
+  cursor: default; 
+}
+
+/* Estilos para el botón de cierre */
+.modal-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 30px;
+  font-weight: bold;  
+  cursor: pointer;
+  color: #333;
+}
+
+.modal-close-btn:hover {
+  color: #b53490;
+}
+
+.no-invitacion-text {
+  color: #b71c1c;
+  font-size: 1.2rem;
+  font-weight: bold;
+  line-height: 1.5;
+}
+
+/* Dispositivos con un ancho de hasta 1024px (tablets en orientación horizontal) */
+@media (max-width: 1024px) {
+  .singin-container {
+    width: 70%;
+  }
+}
+
+/* Dispositivos con un ancho de hasta 768px */
+@media (max-width: 768px) {
+  .registro-wrapper {
+    flex-direction: column;
+    height: auto;
+    padding: 20px;
+    align-items: center;
+    justify-content: center;
+  }
+  .singin-container {
+    width: 95%;
+    max-width: 500px;
+    padding: 15px;
+    margin-top: 20px;
+    background-position: center 50%;
+  }
+  .botonera-horizontal {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .botonera-horizontal button {
+    width: 90%;
+  }
+  .titulo-registro {
+    font-size: 1.5rem;
+  }
+  /* Estilos del modal para tablets */
+  .no-invitacion-container {
+    padding: 40px;
+    width: 90%;
+    max-width: 400px;
+  }
+  .no-invitacion-text {
+    font-size: 1rem;
+  }
+  .modal-close-btn {
+    top: 10px;
+    right: 10px;
+    font-size: 20px;
+  }
+}
+
+/* Dispositivos con un ancho de hasta 480px (teléfonos móviles) */
+@media (max-width: 480px) {
+  .registro-wrapper {
+    padding-top: 30px;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 10px;
+  }
+  .singin-container {
+    width: 100%;
+    max-width: 350px;
+    margin: 10px auto;
+    padding: 20px;
+    border-radius: 10px;
+  }
+
+    .modal-overlay{
+    padding-top: calc(96px + env(safe-area-inset-top));
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+
+  .no-invitacion-container {
+    max-height: calc(100vh - 96px - 120px);
+    padding: 20px;
+    width: 95%;
+    max-width: 350px;
+  }
+  .botonera-horizontal {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .botonera-horizontal button {
+    width: 100%;
+  }
+}

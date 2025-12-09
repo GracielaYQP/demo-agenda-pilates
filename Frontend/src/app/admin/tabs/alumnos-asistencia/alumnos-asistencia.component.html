@@ -1,0 +1,31 @@
+<form class="filtros" [formGroup]="form">
+  <label>Mes <select formControlName="mes">
+    <option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [value]="m">{{m}}</option>
+  </select></label>
+  <label>Año <input type="number" formControlName="anio"></label>
+</form>
+
+<div *ngIf="loading()" class="loading">Cargando…</div>
+<div *ngIf="error()" class="error">{{error()}}</div>
+
+<div *ngIf="data() as d">
+  <div class="cards">
+    <div class="card"><p class="kpi-title">Alumnos activos</p><p class="kpi-value">{{d.alumnosActivos}}</p></div>
+    <div class="card"><p class="kpi-title">Asistencia promedio</p><p class="kpi-value">{{d.asistenciaPromedioPct | number:'1.0-0'}}%</p></div>
+    <div class="card"><p class="kpi-title">Cancelaciones</p><p class="kpi-value">{{d.cancelaciones}}</p></div>
+    <div class="card"><p class="kpi-title">Recuperaciones</p><p class="kpi-value">{{d.recuperaciones}}</p></div>
+    <div class="card"><p class="kpi-title">Nuevos alumnos</p><p class="kpi-value">{{d.nuevosAlumnos}}</p></div>
+  </div>
+
+  <div class="panel">
+    <h3>Top 5 constancia</h3>
+    <div class="bars">
+      <div class="bar" *ngFor="let r of d.rankingTop5" [style.--pct]="r.pct">
+        <span class="bar-label">{{r.alumno}}</span>
+        <span class="bar-fill"></span>
+        <span class="bar-value">{{r.pct | number:'1.0-0'}}%</span>
+      </div>
+    </div>
+  </div>
+</div>
+

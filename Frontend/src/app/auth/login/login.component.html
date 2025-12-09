@@ -1,0 +1,70 @@
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <div class="login-wrapper">
+    <div id="login_alumnos" class="singin-container">
+      <p class="titulo-login">INICIAR SESIÓN</p>
+
+      <!-- Usuario -->
+      <div class="form-group">
+        <label for="usuario">Correo o Teléfono:</label>
+        <input id="usuario" formControlName="usuario" type="text" placeholder="ej: lucia@gmail.com o 3511234567"  #usuarioInput />
+        <ng-container *ngIf="Usuario?.errors && Usuario?.touched">
+          <p class="text-danger" *ngIf="Usuario?.hasError('required')">Este campo es obligatorio.</p>
+        </ng-container>
+      </div>
+
+      <!-- Contraseña -->
+      <div class="form-group">
+        <label for="password">Contraseña:</label>
+        <div class="password-wrapper">
+          <input [type]="showPassword ? 'text' : 'password'" id="password" formControlName="password" />
+          <button type="button" class="toggle-password" (click)="togglePasswordVisibility()" aria-label="Mostrar u ocultar contraseña">
+            <i [ngClass]="showPassword ? 'fa fa-eye' : 'fa fa-eye-slash'"></i>
+          </button>
+        </div>
+        <ng-container *ngIf="Password?.errors && Password?.touched">
+          <p class="text-danger" *ngIf="Password?.hasError('required')">La contraseña es requerida.</p>
+        </ng-container>
+      </div>
+
+      <!-- Botón ingresar -->
+      <div class="form-group center-button">
+        <button type="submit" class="btn-singin" [disabled]="form.invalid">Ingresar</button>
+      </div>
+
+      <div *ngIf="showInviteHint" class="invite-callout" role="status" aria-live="polite">
+        <div class="callout-header">
+          <span class="dot"></span>
+          ¿No tenés cuenta?
+        </div>
+
+        <p>
+          Este estudio crea cuentas <strong>por invitación personalizada</strong>.
+          Para registrarte, pedí tu <strong>link de invitación</strong> por WhatsApp a la administradora.
+        </p>
+
+        <a
+          class="wa-button"
+          href="https://wa.me/5493517152375?text=Hola%20Luc%C3%ADa%2C%20quisiera%20mi%20link%20de%20invitaci%C3%B3n%20para%20la%20app%20de%20Pilates."
+          target="_blank"
+          rel="noopener"
+        >
+          Pedir invitación por WhatsApp
+        </a>
+      </div>
+
+
+      <!-- Error global-->
+      <div *ngIf="error" class="text-danger mensaje-error">
+        {{ error }}
+      </div>
+
+
+      <!-- Recuperar contraseña (SIEMPRE visible para todos) -->
+      <div class="form-footer text-center">
+        <p>¿Olvidaste tu contraseña?</p>
+        <button class="btn-singin" type="button" (click)="solicitarResetPorWhatsapp()">Recibir link por WhatsApp</button>
+      </div>
+
+    </div>
+  </div>
+</form>

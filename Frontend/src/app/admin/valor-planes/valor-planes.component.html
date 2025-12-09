@@ -1,0 +1,53 @@
+<section class="admin-section">
+  <div class="content">
+    <div class="card">
+      <h2>Valores de los Planes</h2>
+
+      <form [formGroup]="form" (ngSubmit)="guardar()">
+        <div class="row">
+          <label for="suelta">Clase suelta / prueba</label>
+          <div class="money">
+            <input id="suelta" type="number" formControlName="suelta_precio" min="0" />
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="cuatro">4 clases</label>
+          <div class="money">
+            <input id="cuatro" type="number" formControlName="cuatro_precio" min="0" />
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="ocho">8 clases</label>
+          <div class="money">
+            <input id="ocho" type="number" formControlName="ocho_precio" min="0" />
+          </div>
+        </div>
+
+        <div class="row">
+          <label for="doce">12 clases</label>
+          <div class="money">
+            <input id="doce" type="number" formControlName="doce_precio" min="0" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn-accion guardar">Guardar valores</button>
+          <button type="button" class="btn-accion cerrar" (click)="cerrarFormulario()">Cerrar</button>
+        </div>
+      </form>
+
+      <p class="footnote">
+        Los valores visibles se reflejan en la página pública <strong>“Planes”</strong>.
+      </p>
+    </div>
+  </div>
+</section>
+<!-- ✅ MODAL DE CONFIRMACIÓN -->
+<div *ngIf="modalVisible" class="modal-overlay">
+  <div class="modal-content" [ngClass]="{'error': esError, 'success': !esError}">
+    <h4>{{ mensajeModal }}</h4>
+    <!-- <button class="btn-cerrar" (click)="modalVisible = false">Cerrar</button> -->
+  </div>
+</div>

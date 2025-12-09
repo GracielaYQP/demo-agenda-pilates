@@ -1,0 +1,22 @@
+<div class="wrap">
+  <h2>Dashboard</h2>
+
+  <nav class="tabs">
+    <button [class.active]="tab()==='finanzas'" (click)="setTab('finanzas')">🟣 Finanzas</button>
+    <button [class.active]="tab()==='alumnos'"  (click)="setTab('alumnos')">🟢 Alumnos</button>
+    <button [class.active]="tab()==='clases'"   (click)="setTab('clases')">🔵 Clases</button>
+  </nav>
+
+  <section *ngIf="tab()==='finanzas'">
+    <app-finanzas-dashboard></app-finanzas-dashboard>
+  </section>
+
+  <section *ngIf="tab()==='alumnos'">
+    <app-alumnos-asistencia></app-alumnos-asistencia>
+  </section>
+
+  <section *ngIf="tab()==='clases'">
+    <app-clases-operacion></app-clases-operacion>
+  </section>
+</div>
+

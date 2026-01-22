@@ -102,8 +102,10 @@ input {
 
 /* Hover más oscuro */
 .btn-singin:hover {
-  background-color: #af1155;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
   color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .btn-cerrar {

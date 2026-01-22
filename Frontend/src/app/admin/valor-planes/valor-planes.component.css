@@ -172,8 +172,10 @@ form {
   color: #fff;
 }
 .btn-accion.guardar:hover {
-  background: #af1155;
-  color: #000;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
+  color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .btn-accion.cerrar {

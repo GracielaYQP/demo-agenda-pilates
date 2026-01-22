@@ -169,8 +169,10 @@ tbody tr:hover {
 }
 
 .edit-btn:hover {
-  color: #af1155;
-  transform: scale(1.2);
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
+  color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .delete-btn:hover {
@@ -270,8 +272,10 @@ tbody tr:hover {
 }
 
 .nuevo-alumno-btn:hover {
-  background-color: #af1155;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
   color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .modal-overlay {
@@ -330,8 +334,10 @@ tbody tr:hover {
 }
 
 .btn-confirmar:hover {
-  background-color: #af1155;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
   color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .btn-cerrar {
@@ -358,8 +364,10 @@ tbody tr:hover {
 }
 
 .btn-cancelar-toggle:hover {
-  background-color: #af1155;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
   color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .calendar-btn:hover {

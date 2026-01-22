@@ -7,9 +7,7 @@
   width: 100%;
   z-index: 3000;
 
-  /* theme */
-  background: rgba(246,247,246,.92);           /* similar a var(--bg) pero suave */
-  color: var(--text);
+  background: rgba(246,247,246,.92);           
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(8px);

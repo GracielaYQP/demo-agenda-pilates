@@ -1,7 +1,7 @@
 <header class="site-header">
   <div class="header-container">
     <!-- IZQUIERDA: Logo -->
-    <img src="assets/logos/logo.jpg" alt="Logo" class="logo" />
+    <img src="assets/logos/logo.png" alt="Logo" class="logo" />
 
     <!-- CENTRO: Título -->
     <div class="title-container">
@@ -28,7 +28,7 @@
 
       <ng-container *ngIf="!auth.isLoggedIn() || (auth.isLoggedIn() && !isAdmin)">
         <li><a routerLink="/acerca-de" (click)="cerrarMenu()">¿Qué es pilates?</a></li>
-        <li><a routerLink="/cv-lucia" (click)="cerrarMenu()">Lucía Carletta</a></li>
+        <li><a routerLink="/cv-instructor" (click)="cerrarMenu()">CV instructor/a</a></li>
         <li><a routerLink="/clases" (click)="cerrarMenu()">Clases</a></li>
         <li><a routerLink="/normas-basicas" (click)="cerrarMenu()">Reglamento del Estudio</a></li>
         <li><a routerLink="/planes" (click)="cerrarMenu()">Planes</a></li>

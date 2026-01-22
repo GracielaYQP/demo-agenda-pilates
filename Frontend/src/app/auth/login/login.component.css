@@ -102,7 +102,7 @@ button {
 }
 /* Botón fucsia */
 .btn-singin {
-  background-color: #B53490;
+  background-color: var(--primary);
   color: white;
   padding: 10px 20px;
   border: none;
@@ -118,8 +118,10 @@ button {
 
 /* Hover más oscuro */
 .btn-singin:hover {
-  background-color: #af1155;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
   color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 /* Centrado */
@@ -211,13 +213,13 @@ button {
   align-items: center;
   gap: 8px;
   font-weight: 700;
-  color: #b53490;
+  color: var(--primary);
   margin-bottom: 6px;
 }
 
 .dot {
   width: 10px; height: 10px; border-radius: 50%;
-  background: #b53490;
+  background: var(--primary);
   box-shadow: 0 0 0 0 rgba(181,52,144,.6);
   animation: dotPulse 2s infinite;
 }

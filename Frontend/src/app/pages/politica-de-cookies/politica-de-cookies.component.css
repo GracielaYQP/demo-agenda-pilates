@@ -62,7 +62,7 @@
 
 .volver-inicio button {
   background-color: rgba(236, 234, 244, 0.8);
-  color: #b53490;
+  color: var(--primary);
   border: none;
   padding: 10px 20px;
   border-radius: 6px;

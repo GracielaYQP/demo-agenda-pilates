@@ -39,7 +39,7 @@ h2 {
   font-weight: bold;
   letter-spacing: 0.5px;
   text-align: center;
-  color: #b53490;
+  color: var(--primary);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
   background: linear-gradient(to bottom, #ffffff, #dbccd1);
   border-radius: 6px;
@@ -168,7 +168,7 @@ form {
 
 /* Estilos individuales */
 .btn-accion.guardar {
-  background: #b53490;
+  background: var(--primary);
   color: #fff;
 }
 .btn-accion.guardar:hover {

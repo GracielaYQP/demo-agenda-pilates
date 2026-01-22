@@ -18,7 +18,7 @@ h2 {
   font-weight: bold;
   letter-spacing: 0.5px;
   text-align: center;
-  color: #b53490;
+  color: var(--primary);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
   background:linear-gradient(#fff,#dbccd1);
   border-radius: 6px;
@@ -39,7 +39,7 @@ table {
 
 thead {
   background:linear-gradient(#fff,#dbccd1);
-  color: #B53490;
+  color: var(--primary);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
 }
 
@@ -51,7 +51,7 @@ th {
   letter-spacing: 0.5px;
   text-align: center;
   background:linear-gradient(#fff,#dbccd1);
-  color: #b53490;
+  color: var(--primary);
   border-radius: 6px;
   box-shadow: inset 0 0 0 1px #ddd;
   border: 2px solid black;
@@ -76,7 +76,7 @@ tbody tr:hover {
 
 .hora-columna {
   background:linear-gradient(#fff,#dbccd1);
-  color: #b53490;
+  color: var(--primary);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
   font-weight: bold;
   text-align: center;
@@ -226,7 +226,7 @@ tbody tr:hover {
 
 .modal-content h3 {
   text-align: center;
-  color: #b53490;
+  color: var(--primary);
   font-size: 1.4rem;
   font-weight: bold;
   margin-bottom: 16px;
@@ -271,7 +271,7 @@ tbody tr:hover {
 
 .modal-content .btn-anular,
 .modal-content .btn-editar {
-  background-color: #B53490;
+  background-color: var(--primary);
   border: none;
   padding: 6px 12px;
   margin-left: 6px;
@@ -284,7 +284,7 @@ tbody tr:hover {
 
 .modal-content .btn-anular:hover,
 .modal-content .btn-editar:hover {
-  background-color: #af1155;
+  background-color: var(--primary);
 }
 
 .modal-content .reserva-editando {
@@ -306,13 +306,15 @@ tbody tr:hover {
 }
 
 .btn-confirmar {
-  background-color: #B53490;
+  background-color: var(--primary);
   color: white;
 }
 
 .btn-confirmar:hover {
-  background-color: #af1155;
-  color:#000;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
+  color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .btn-cerrar {
@@ -342,7 +344,7 @@ tbody tr:hover {
 }
 
 .btn-cancelar-toggle {
-  background-color: #B53490;
+  background-color: var(--primary);
   color: white;
   padding: 10px;
   border: none;
@@ -355,12 +357,14 @@ tbody tr:hover {
 }
 
 .btn-cancelar-toggle:hover {
-  background-color: #af1155;
-  color:#000;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
+  color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .btn-cancelar {
-  background-color: #B53490;
+  background-color: var(--primary);
   color: white;
   padding: 10px;
   border: none;
@@ -372,8 +376,10 @@ tbody tr:hover {
 }
 
 .btn-cancelar:hover {
-  background-color: #af1155;
-  color:#000;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
+  color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .btn-cerrar {
@@ -446,7 +452,7 @@ tbody tr:hover {
 }
 
 #modal-tipo-cancelacion h3 {
-  color: #b53490;
+  color: var(--primary);
   margin-bottom: 20px;
   font-size: 1.4rem;
   font-weight: bold;

@@ -2,13 +2,13 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-cv-lucia',
+  selector: 'app-cv-instructor',
   standalone: true,
   imports: [],
-  templateUrl: './cv-lucia.component.html',
-  styleUrl: './cv-lucia.component.css'
+  templateUrl: './cv-instructor.component.html',
+  styleUrl: './cv-instructor.component.css'
 })
-export class CvLuciaComponent {
+export class CvInstructorComponent {
   constructor(private router: Router) {}
   
       volverAlInicio() {

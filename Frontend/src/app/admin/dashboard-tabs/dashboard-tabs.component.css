@@ -7,7 +7,7 @@ h2 {
   font-weight: bold;
   letter-spacing: 0.5px;
   text-align: center;
-  color: #b53490;
+  color: var(--primary);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
   background:linear-gradient(#fff,#dbccd1);
   border-radius: 6px;
@@ -36,21 +36,21 @@ h2 {
 
 /* hover opcional */
 .tabs button:hover{
-  border-color: #b53490;
+  border-color: var(--primary);
   box-shadow: 0 6px 16px rgba(0,0,0,.08);
 }
 
 /* ACTIVO: fondo fucsia + texto blanco */
 .tabs button.active{
-  background: #b53490;
+  background: var(--primary);
   color: #fff;
-  border-color: #b53490;
+  border-color: var(--primary);
   box-shadow: 0 6px 16px rgba(181,52,144,.25);
 }
 
 /* Accesibilidad foco teclado */
 .tabs button:focus-visible{
-  outline: 2px solid #b53490;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(181,52,144,.18);
 }

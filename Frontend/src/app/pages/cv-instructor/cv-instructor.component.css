@@ -48,7 +48,7 @@
   max-width: 100%;
 }
 
-.img-lucia {
+.img-instructor {
   width: 180px;
   height: auto;
   border-radius: 8px;
@@ -77,7 +77,7 @@
 
 .volver-inicio button {
   background-color: rgba(236, 234, 244, 0.8);
-  color: #b53490;
+  color: var(--primary);
   border: none;
   padding: 10px 20px;
   border-radius: 6px;

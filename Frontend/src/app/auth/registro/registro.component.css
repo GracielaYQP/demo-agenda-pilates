@@ -75,7 +75,7 @@ html, body {
 }
 
 .btn-singin {
-  background-color: #B53490;
+  background-color: var(--primary);
   color: white;
   padding: 10px 20px;
   border: none;
@@ -90,8 +90,10 @@ html, body {
 }
 
 .btn-singin:hover {
-  background-color: #af1155;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
   color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .btn-cerrar {
@@ -203,11 +205,11 @@ html, body {
 }
 
 .modal-close-btn:hover {
-  color: #b53490;
+  color: var(--primary);
 }
 
 .no-invitacion-text {
-  color: #b71c1c;
+  color: var(--primary);
   font-size: 1.2rem;
   font-weight: bold;
   line-height: 1.5;

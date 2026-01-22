@@ -4,7 +4,7 @@ import { AuthGuard } from './services/auth.guard';
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent) },
   { path: 'acerca-de', loadComponent: () => import('./pages/acerca-de/acerca-de.component').then(m => m.AcercaDeComponent) },
-  { path: 'cv-lucia', loadComponent: () => import('./pages/cv-lucia/cv-lucia.component').then(m => m.CvLuciaComponent) },
+  { path: 'cv-instructor', loadComponent: () => import('./pages/cv-instructor/cv-instructor.component').then(m => m.CvInstructorComponent) },
   { path: 'login', loadComponent: () => import('./auth/login/login.component').then(m => m.LoginComponent) },
   { path: 'register', loadComponent: () => import('./auth/registro/registro.component').then(m => m.RegistroComponent) },
   { path: 'clases', loadComponent: () => import('./pages/clases/clases.component').then(m => m.ClasesComponent) },

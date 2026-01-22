@@ -15,7 +15,7 @@ h2 {
   font-weight: bold;
   letter-spacing: 0.5px;
   text-align: center;
-  color: #b53490;
+  color: var(--primary);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
   background: linear-gradient(to bottom, #ffffff, #dbccd1);
   border-radius: 6px;
@@ -36,7 +36,7 @@ table {
 
 thead {
   background: linear-gradient(to bottom, #ffffff, #dbccd1);
-  color: #B53490;
+  color: var(--primary);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
 }
 
@@ -48,7 +48,7 @@ th {
   letter-spacing: 0.5px;
   text-align: center;
   background: linear-gradient(to bottom, #ffffff, #dbccd1);
-  color: #b53490;
+  color: var(--primary);
   border-radius: 6px;
   box-shadow: inset 0 0 0 1px #ddd;
   border: 2px solid black;
@@ -76,7 +76,7 @@ tbody tr:hover {
 
 .hora-columna {
   background: linear-gradient(to bottom, #ffffff, #dbccd1);
-  color: #b53490;
+  color: var(--primary);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
   font-weight: bold;
   text-align: center;
@@ -231,7 +231,7 @@ tbody tr:hover {
 }
 
 .modal-content button {
-  background-color: #b53490;
+  background-color: var(--primary);
   color: white;
   font-weight: bold;
   border: none;
@@ -244,8 +244,10 @@ tbody tr:hover {
 }
 
 .modal-content button:hover {
-  background-color: #af1155;
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
   color: black;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .modal-content button:focus {

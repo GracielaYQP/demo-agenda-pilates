@@ -1,56 +1,80 @@
-
 /* ------------------ CONFIGURACIÓN GENERAL ------------------ */
-:root {
+:root{
   --header-h: 84px; /* valor de respaldo inicial */
+
+  /* ===== THEME DEMO: SAGE / NEUTRAL WELLNESS ===== */
+  --primary: #209b6c;     /* verde salvia (acento) */
+  --bg: #F6F7F6;          /* blanco roto (fondo base) */
+  --text: #4A4A4A;        /* gris suave (texto) */
+  --muted: #E3E6E5;       /* gris claro (bordes/inputs/cards) */
+
+  /* extras útiles */
+  --card: rgba(246,247,246,.88);     /* card translúcida, wellness */
+  --border: rgba(74,74,74,.18);      /* borde suave */
+  --shadow: 0 10px 22px rgba(0,0,0,.10);
+  --shadow-soft: 0 6px 14px rgba(0,0,0,.08);
+
+  --warn: #D4B483;        /* arena suave */
+  --error: #C97A7A;       /* rojo apagado */
 }
+
 /* Compensa anclas y desplazamientos con header fijo */
 html { scroll-padding-top: var(--header-h); }
 
 /* Si navegás a #ids concretos, que no queden tapados */
 [id] { scroll-margin-top: var(--header-h); }
 
-
-html {
+html{
   box-sizing: border-box;
   font-family: 'Poppins', sans-serif;
-  color: #000000;
+  color: var(--text);
   height: 100%;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  background: var(--bg);
 }
 
-*, *::before, *::after {
+*, *::before, *::after{
   box-sizing: inherit;
   margin: 0;
   padding: 0;
 }
 
 /* ------------------ CUERPO Y FONDO ------------------ */
-
-body {
+/* ✅ Opción A: mantener imagen pero NEUTRALIZADA (recomendado si querés "lindo" sin marca)
+   ✅ Opción B: fondo liso (más genérico) -> comentá background-image y listo */
+body{
   min-height: 100vh;
   width: 100%;
-  overflow-x: auto; /* ✅ debe permitir scroll horizontal */
   display: flex;
   flex-direction: column;
   height: 100%;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  background-image: url('assets/fotos/estudio-vacio.jpg');
-  background-repeat: no-repeat;      /* Evita que la imagen se repita */
-  background-size: cover;            /* Hace que la imagen cubra todo el contenedor */
-  background-position: center 90%; /*sube la imagen hacia  */
-  background-color: rgba(255,255,255,0.2); /* Blanco semitransparente encima */
-  background-blend-mode: lighten;
+
+  /* Fondo base neutro */
+  background-color: var(--bg);
+
+  /* Opción A: imagen suavizada (lavada + leve tinte sage) */
+  background-image:
+    linear-gradient(
+      0deg,
+      rgba(246,247,246,.92),
+      rgba(143,175,163,.08)
+    ),
+    url('assets/fotos/estudio-vacio.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center 90%;
+  background-blend-mode: normal;
 }
 
-
 /* Opcional: fondo para toda la app si usás un div raíz */
-app-root {
+app-root{
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -59,64 +83,86 @@ app-root {
 }
 
 /* ------------------ CONTENIDO PRINCIPAL Y FOOTER ------------------ */
-main.container {
-  flex-grow: 1; 
+main.container{
+  flex-grow: 1;
   padding-bottom: 0;
-  padding-top: var(--header-h); /* Elimina el padding si hay el sticky footer */
+  padding-top: var(--header-h);
 }
 
-main {
-  flex: 1 0 auto;
-}
-
-footer {
-  flex-shrink: 0;
-}
+main{ flex: 1 0 auto; }
+footer{ flex-shrink: 0; }
 
 /* ------------------ RESPONSIVE FOOTER ------------------ */
+@media (max-width: 768px){
+  :root{ --header-h: 64px; }
+  footer{ position: static; }
 
-@media (max-width: 768px) {
-  footer {
-    position: static;
-  }
-
-body,
-main.container {
+  body,
+  main.container{
     padding-bottom: 0;
   }
 }
 
-/* ------------------ TABLA RESPONSIVE (AGREGADO CLAVE) ------------------ */
-
-.table-container {
+/* ------------------ TABLA RESPONSIVE (DEMO) ------------------ */
+.table-container{
   width: 100%;
-  overflow-x: visible;
-  padding: 0;
+  overflow-x: auto;              /* ✅ si la tabla crece, scroll horizontal */
+  padding: 12px;                /* un poco de aire */
   box-sizing: border-box;
+
+  /* ✅ look demo: card suave */
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(6px);
 }
 
-table {
+/* Si querés que en desktop no scrollee, podés volver a visible,
+   pero para demo y responsive suele ser mejor auto */
+@media (min-width: 1024px){
+  .table-container{
+    overflow-x: auto;
+  }
+}
+
+table{
   width: 100%;
   border-collapse: collapse;
   border-spacing: 6px 6px;
   text-align: center;
   font-size: 14px;
-
+  color: var(--text);
 }
 
-@media screen and (max-width: 480px) {
-  .table-container {
-    padding: 5px;
-  }
-
-  table {
-    font-size: 12px;
-  }
+/* Opcional: encabezados más "wellness" */
+table th{
+  background: rgba(143,175,163,.14);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
 }
 
-/* Clase personalizada para achicar el modal dele Swal */
-.my-custom-popup {
-  font-size: 14px;         /* texto más chico */
-  padding: 12px;           /* menos espacio */
-  border-radius: 10px;     /* bordes más redondeados */
+/* Opcional: celdas */
+table td{
+  border-bottom: 1px solid rgba(74,74,74,.10);
+}
+
+/* Hover suave */
+table tr:hover td{
+  background: rgba(143,175,163,.08);
+}
+
+@media screen and (max-width: 480px){
+  .table-container{ padding: 8px; }
+  table{ font-size: 12px; }
+}
+
+/* Clase personalizada para achicar el modal del Swal */
+.my-custom-popup{
+  font-size: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
 }

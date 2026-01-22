@@ -1,27 +1,28 @@
 <footer>
   <div class="footerTurnos">
     <div class="footer-container">
-      
+
       <!-- CONTACTO -->
       <div class="contact-info">
         <p>
-          <a href="https://wa.me/5493517152375" target="_blank" rel="noopener">
-            <img src="assets/logos/icono-whatsapp.png" alt="Whatsapp" class="iconos-contacto" />
+          <a [href]="brand.links.whatsapp" target="_blank" rel="noopener">
+            <img [src]="brand.assets.iconWhatsapp" alt="Whatsapp" class="iconos-contacto" />
           </a>
-          +54 9 351 715-2375
+          {{ brand.phoneDisplay }}
         </p>
+
         <p>
-          <a href="mailto:luciacarletta2016@gmail.com">
-            <img src="assets/logos/icono-email.png" alt="Email" class="iconos-contacto" />
-          </a> 
-          luciacarletta2016&#64;gmail.com 
-        </p>
-        <p>
-          <a href="https://www.google.com/maps?q=Shopping+Melos+Alberdi+50+Villa+Carlos+Paz+Córdoba+Argentina"
-             target="_blank" rel="noopener noreferrer">
-            <img src="assets/logos/icono-ubicacion.png" alt="Ubicación" class="iconos-contacto" />
+          <a [href]="'mailto:' + brand.email">
+            <img [src]="brand.assets.iconEmail" alt="Email" class="iconos-contacto" />
           </a>
-          Shopping Melos - Florida 69 - Local 111 - Villa Carlos Paz - Córdoba - Argentina
+          {{ brand.email }}
+        </p>
+
+        <p>
+          <a [href]="brand.links.maps" target="_blank" rel="noopener noreferrer">
+            <img [src]="brand.assets.iconLocation" alt="Ubicación" class="iconos-contacto" />
+          </a>
+          {{ brand.locationText }}
         </p>
       </div>
 
@@ -29,9 +30,9 @@
       <div class="reglamentos">
         <div class="reglamentos-col">
           <ul>
-            <li><a href="#/terminos-y-condiciones" target="_blank" rel="noopener">Términos y Condiciones</a></li>
-            <li><a href="#/politica-de-privacidad" target="_blank" rel="noopener">Política de Privacidad</a></li>
-            <li><a href="#/politica-de-cookies" target="_blank" rel="noopener">Política de Cookies</a></li>
+            <li><a [href]="brand.legal.terms" target="_blank" rel="noopener">Términos y Condiciones</a></li>
+            <li><a [href]="brand.legal.privacy" target="_blank" rel="noopener">Política de Privacidad</a></li>
+            <li><a [href]="brand.legal.cookies" target="_blank" rel="noopener">Política de Cookies</a></li>
           </ul>
         </div>
       </div>
@@ -39,12 +40,13 @@
       <!-- COPYRIGHT -->
       <div class="copyright">
         <p>
-          &copy; 2025 Lucía Carletta - Estudio Pilates - Diseño y desarrollo ThySeTech
-          <a href="https://thysetech.com/" target="_blank" rel="noopener noreferrer">
-            <img src="assets/logos/icon512.png" alt="Logo ThySeTech" class="logo-inline" />
+          {{ brand.copyright }}
+          <a [href]="brand.links.website" target="_blank" rel="noopener noreferrer">
+            <img [src]="brand.assets.thyseLogo" alt="Logo ThySeTech" class="logo-inline" />
           </a>
         </p>
       </div>
+
     </div>
   </div>
 </footer>

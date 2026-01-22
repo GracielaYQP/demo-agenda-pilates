@@ -4,6 +4,8 @@ import { HeaderComponent } from './shared/header/header.component';
 import { FooterComponent } from './shared/footer/footer.component';
 import { AuthService } from './services/auth.service';
 import { filter } from 'rxjs';
+import { BRAND } from './core/config/brand';
+
 
 @Component({
   selector: 'app-root',
@@ -14,6 +16,8 @@ import { filter } from 'rxjs';
 })
 export class AppComponent  implements OnInit {
   title = 'Frontend';
+  links = BRAND.links;
+
   constructor(private auth: AuthService, private router: Router) {
     window.addEventListener('beforeunload', () => {
       this.auth.logout();

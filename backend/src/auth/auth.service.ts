@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcryptjs';
 import { User } from '../users/user.entity';
 import { ConfigService } from '@nestjs/config';
+import { RegisterAdminDemoDto } from './dto/register-admin-demo.dto';
 
 
 @Injectable()
@@ -148,4 +149,44 @@ export class AuthService {
     console.log(`🔐 Contraseña actualizada correctamente para ${user.telefono}`);
     return { message: 'Contraseña restablecida exitosamente' };
   }  
+
+  async registrarAdminDemo(dto: RegisterAdminDemoDto) {
+
+    if (process.env.DEMO_MODE !== 'true') {
+      throw new BadRequestException('El registro demo no está habilitado.');
+    }
+
+    const existente = await this.usersService.findByEmail(dto.email);
+    if (existente) {
+      throw new BadRequestException('Ya existe un usuario con ese email.');
+    }
+
+    const ahora = new Date();
+    const demoHasta = new Date();
+    demoHasta.setDate(ahora.getDate() + 10); // 10 días de demo
+
+    const user = await this.usersService.createAdminDemo({
+      email: dto.email,
+      nombre: dto.nombre,
+      apellido: dto.apellido,
+      dni: dto.dni,
+      telefono: dto.telefono,
+      password: hashed,
+      nivel: dto.nivel,
+      planMensual: dto.planMensual,
+      rol: 'admin',
+      esDemo: true,
+      demoDesde: ahora,
+      demoHasta,
+    });
+
+    const token = await this.loginWithUser(user);
+
+    return {
+      message: `Demo creado. Expira el ${demoHasta.toLocaleDateString()}`,
+      access_token: token.access_token,
+      user,
+    };
+  }
+
 }

@@ -11,26 +11,30 @@ async function bootstrap() {
 
   // Dominios permitidos
   const allowedOrigins = [
-    'http://localhost:4200',        // Angular dev
-    'http://127.0.0.1:4200',        // alternativa
-    'https://luciacarlettapilates.com', 
+    'http://localhost:4200',       
+    'http://127.0.0.1:4200',
+    'http://localhost:4300',    
+    'http://127.0.0.1:4300',      
+    'https://demoagendapilates.com', 
   ];
 
   app.enableCors({
     origin: [
-      'https://luciacarlettapilates.com',
+      'https://demoagendapilates.com',
       'http://localhost:4200',
       'http://127.0.0.1:4200',
+      'http://localhost:4300',     
+      'http://127.0.0.1:4300',
     ],
     methods: ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'],
     allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
-    credentials: false,     // poné true SOLO si vas a usar cookies/sesión
+    credentials: false,     
     maxAge: 86400,
     optionsSuccessStatus: 204,
   });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
 
-  await app.listen(process.env.PORT || 3000, '0.0.0.0');
+  await app.listen(process.env.PORT || 3100, '0.0.0.0');
 }
 bootstrap();

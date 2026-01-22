@@ -1,22 +1,27 @@
 <header class="site-header">
   <div class="header-container">
-    <!-- Logo -->
+    <!-- IZQUIERDA: Logo -->
     <img src="assets/logos/logo.jpg" alt="Logo" class="logo" />
-    
-    <!-- Título + Bienvenida centrados -->
+
+    <!-- CENTRO: Título -->
     <div class="title-container">
-      <h1>Lucía Carletta - Estudio Pilates</h1>
-      <div class="bienvenida" *ngIf="localStorage.getItem('nombreUsuario')">
-        {{ 'Bienvenid@, ' + localStorage.getItem('nombreUsuario') }}
-      </div>
+      <h1>Demo Estudio Pilates</h1>
     </div>
-    <button class="hamburger" (click)="toggleMenu()">☰</button>
+
+    <!-- DERECHA: Bienvenida + Hamburguesa -->
+    <div class="header-actions">
+      <div class="bienvenida" *ngIf="localStorage.getItem('nombreUsuario') as nombre">
+        {{ 'Bienvenid&#64;, ' + nombre }}
+      </div>
+
+      <button class="hamburger" type="button" (click)="toggleMenu()">☰</button>
+    </div>
   </div>
 
-  <!-- Fondo oscuro para cerrar menú al hacer clic fuera -->
+  <!-- Overlay -->
   <div class="overlay" *ngIf="menuAbierto" (click)="cerrarMenu()"></div>
 
-  <!-- Menú lateral derecho -->
+  <!-- Menú lateral -->
   <div class="side-menu" [class.open]="menuAbierto">
     <ul>
       <li><a routerLink="/" (click)="cerrarMenu()">Inicio</a></li>
@@ -41,7 +46,7 @@
         <li><a routerLink="/dashboard-tabs" (click)="cerrarMenu()">Dashboard</a></li>
         <li><a routerLink="/admin/invitaciones" (click)="cerrarMenu()">Enviar invitación</a></li>
         <li><a routerLink="/gestion-turnos" (click)="cerrarMenu()">Gestionar turnos</a></li>
-        <li><a routerLink="/listar-alumnos" (click)="cerrarMenu()">Listado de alumnos</a></li> 
+        <li><a routerLink="/listar-alumnos" (click)="cerrarMenu()">Listado de alumnos</a></li>
         <li><a routerLink="/valor-planes" (click)="cerrarMenu()">Valor de los Planes</a></li>
       </ng-container>
 
@@ -56,6 +61,3 @@
     </ul>
   </div>
 </header>
-
-
-

@@ -69,6 +69,11 @@ export class UsersService {
     return await this.userRepository.save(user);
   }
 
+  async createAdminDemo(data: Partial<User>): Promise<User> {
+  const user = this.userRepository.create(data);
+  return this.userRepository.save(user);
+}
+
   async findByEmail(email: string): Promise<User | undefined> {
     const user = await this.userRepository.findOne({ where: { email } });
     return user === null ? undefined : user;

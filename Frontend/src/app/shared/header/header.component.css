@@ -1,146 +1,179 @@
-.site-header {
+/* =========================
+   HEADER (THEME)
+   ========================= */
+.site-header{
   position: fixed;
   top: 0; left: 0; right: 0;
   width: 100%;
   z-index: 3000;
-  background-color: #F5F5F5;
-  padding: 10px 20px;
-  color: #000;
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+
+  /* theme */
+  background: rgba(246,247,246,.92);           /* similar a var(--bg) pero suave */
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(8px);
+
+  padding: 10px 16px;
 }
 
-/* Contenedor flex para logo y texto */
-.header-container {
+/* Contenedor */
+.header-container{
   display: flex;
-  align-items: center; 
-  justify-content: flex-start;
-  gap: 10px;
-  flex-wrap: nowrap;
-   max-width: calc(100vw - 40px); 
-  margin: 0 auto; 
+  align-items: center;
+  justify-content: space-between;  /* ✅ logo izq / título centro / acciones der */
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-/* Logo alineado a la izquierda, tamaño fijo */
-.logo {
-  max-width: 100px;
+/* Logo */
+.logo{
+  width: 64px;
+  max-width: 64px;
   height: auto;
+  flex: 0 0 auto;
 }
 
-.title-container {
-  flex-grow: 1;
-  text-align: center;
+/* Centro: título */
+.title-container{
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  min-width: 0; /* ✅ permite que el h1 haga ellipsis */
 }
 
-/* Título grande, centrado verticalmente, que ocupe todo el espacio restante */
-h1 {
-  font-size: 2.5rem; 
-  flex-grow: 1;
+.title-container h1{
   margin: 0;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1.1;
+  color: var(--primary);
   text-align: center;
-  font-weight: bold;
-  line-height: 1.2;
-  color: #b53490;
+
+  /* ✅ evita que rompa el layout */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
-.bienvenida {
-  align-self: flex-end;
-  font-size: 1rem;
-  font-weight: bold;
-  color: #000;
-  margin-left: auto; 
-  margin-bottom: 4px;
+/* Derecha: bienvenida + burger */
+.header-actions{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
 }
 
-.hamburger {
+.bienvenida{
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--text);
+  opacity: .9;
+  white-space: nowrap;
+}
+
+/* botón burger */
+.hamburger{
   font-size: 1.8rem;
-  background: none;
-  border: none;
+  background: transparent;
+  border: 0;
   cursor: pointer;
-  color: #b53490;
+  color: var(--primary);
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 10px;
 }
 
-.overlay {
+.hamburger:hover{
+  background: rgba(143,175,163,.14);
+}
+
+/* Overlay */
+.overlay{
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.3);
+  inset: 0;
+  background: rgba(0,0,0,.30);
   z-index: 9000;
 }
 
-.side-menu {
+/* Side menu */
+.side-menu{
   position: fixed;
-  top: 0;
-  right: -300px;
-  width: 250px;
-  height: 100%;
-  background-color: #b9b8b8;
-  border-left: 2px solid #b53490;
-  padding: 20px;
-  box-shadow: -4px 0 6px rgba(0, 0, 0, 0.1);
-  transition: right 0.3s ease-in-out;
+  top: var(--header-h);              /* ✅ arranca debajo del header */
+  height: calc(100vh - var(--header-h));
+  right: -320px;
+  width: 280px;
   z-index: 10000;
+
+  background: var(--bg) !important;  /* ✅ fondo sólido */
+  background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+
+  border-left: 2px solid var(--primary);
+  box-shadow: -12px 0 28px rgba(0,0,0,.25);
+
+  padding: 18px 16px;
+  transition: right .28s ease-in-out;
+
+  overflow-y: auto;         
 }
 
-.side-menu.open {
-  right: 0;
-}
 
-.side-menu ul {
+.side-menu.open{ right: 0; }
+
+.side-menu ul{
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.side-menu li {
-  margin-bottom: 15px;
+.side-menu li{
+  margin: 10px 0;
 }
 
-.side-menu a {
+.side-menu a{
+  display: block;
+  padding: 10px 10px;
+  border-radius: 10px;
   text-decoration: none;
-  color: #b53490;
-  font-weight: bold;
+  color: var(--primary);
+  font-weight: 800;
 }
 
-.logout{
-  cursor:pointer;
+.side-menu a:hover{
+  background: rgba(143,175,163,.14);
 }
-@media (max-width: 768px) {
-  .header-container {
-    flex-wrap: nowrap;
-    justify-content: space-between;
-    padding: 0 10px;
+
+.logout{ cursor: pointer; }
+
+/* =========================
+   RESPONSIVE HEADER
+   ========================= */
+@media (max-width: 768px){
+  .site-header{ padding: 8px 12px; }
+
+  .logo{
+    width: 44px;
+    max-width: 44px;
   }
 
-  .logo {
-    max-width: 50px;
-    margin-left: 0;
+  .title-container h1{
+    font-size: 1.2rem;
   }
 
-  .title-container {
-    flex-grow: 1;
-    text-align: center;
+  .bienvenida{
+    display: none; /* ✅ si querés, la sacamos en mobile para no apretar */
   }
 
-  .title-container h1 {
-    font-size: 1.2rem;  
-    margin: 0;
+  .hamburger{
+    font-size: 1.5rem;
   }
 
-  .bienvenida {
-    font-size: 1rem;
-    text-align: center;
-    margin: 5px auto 0 auto;
-  }
-
-  .hamburger {
-    font-size: 1.4rem;
-    margin-left: 10px;
-  }
-
-  .side-menu {
-    width: 80%;
-    max-width: 300px;
+  .side-menu{
+    width: 82%;
+    max-width: 320px;
   }
 }

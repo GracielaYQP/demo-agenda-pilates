@@ -54,11 +54,15 @@ export class User {
   @OneToMany(() => Reserva, reserva => reserva.usuario)
   reservas!: Reserva[]; 
 
-  @Column({ name: 'avatar_url', type: 'text', nullable: true })
-  avatarUrl?: string | null;
+  @Column({ default: false })
+  esDemo!: boolean;
 
-  @Column({ name: 'avatar_key', type: 'varchar', length: 255, nullable: true })
-  avatarKey?: string | null;
+  @Column({ type: 'timestamp', nullable: true })
+  demoDesde!: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  demoHasta!: Date | null;
+
 
 }
 

@@ -19,16 +19,16 @@ import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
    imports: [
-    // TypeOrmModule.forRoot({
-    //   type: 'postgres',
-    //   host: 'localhost',
-    //   port: 5433,
-    //   username: 'postgres',
-    //   password: 'carola20958',
-    //   database: 'pilates_db',
-    //   entities: [__dirname + '/**/*.entity{.ts,.js}'],
-    //   synchronize: true,
-    // }),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'postgres',
+      password: 'carola20958',
+      database: 'demo_agenda_pilates',
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      synchronize: true,
+    }),
     ConfigModule.forRoot({ 
       isGlobal: true,
       envFilePath: [
@@ -39,14 +39,14 @@ import { DashboardModule } from './dashboard/dashboard.module';
         `.env.production`,
       ],
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.DATABASE_URL,
-      synchronize: process.env.DB_SYNC === 'true',
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-      autoLoadEntities: true,
+    // TypeOrmModule.forRoot({
+    //   type: 'postgres',
+    //   url: process.env.DATABASE_URL,
+    //   synchronize: process.env.DB_SYNC === 'true',
+    //   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    //   autoLoadEntities: true,
      
-    }),
+    // }),
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,

@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { BRAND } from 'src/app/core/config/brand';
 
 @Component({
   selector: 'app-footer',
@@ -8,7 +9,7 @@ import { Component } from '@angular/core';
   styleUrl: './footer.component.css'
 })
 export class FooterComponent {
-
+  brand = BRAND;
 }
 
 

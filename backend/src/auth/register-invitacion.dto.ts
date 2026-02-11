@@ -16,10 +16,6 @@ export class RegisterInvitacionDto {
 
   @IsString()
   @IsNotEmpty()
-  telefono!: string;
-
-  @IsString()
-  @IsNotEmpty()
   email!: string;
 
   @IsNotEmpty()

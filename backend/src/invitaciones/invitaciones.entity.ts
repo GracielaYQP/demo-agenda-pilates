@@ -10,6 +10,7 @@ import {
 
 // ⬇️ Tipo para el estado de la invitación
 export type EstadoInvitacion = 'pendiente' | 'usado' | 'anulado';
+export type RolInvitacion = 'admin' | 'alumno';
 
 @Entity('invitaciones')
 @Unique('u_token', ['token'])         
@@ -24,8 +25,11 @@ export class Invitacion {
   @Column({ unique: true, length: 200 })
   token!: string;
 
-  @Column({ length: 20 })
-  nivel_asignado!: string;
+  @Column({ type: 'varchar', length: 10, default: 'alumno' })
+  rol!: RolInvitacion;
+
+  @Column({ length: 20, nullable: true })
+  nivel_asignado?: string | null;
 
   @Column({ type: 'varchar', length: 12, default: 'pendiente' })
   estado!: EstadoInvitacion;

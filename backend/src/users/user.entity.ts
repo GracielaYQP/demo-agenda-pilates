@@ -33,7 +33,7 @@ export class User {
   @Column()
   password!: string;
 
-  @Column({ default: 'alumno/a' })
+  @Column({ default: 'alumno' })
   rol!: string;
     
   @Column({ default: true })

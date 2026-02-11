@@ -21,7 +21,12 @@ export class InvitacionesService {
     await this.invitacionRepo.update(id, { estado: 'usado' as EstadoInvitacion });
   }
 
-  async crearInvitacion(telefono: string, nivel: string, token: string): Promise<Invitacion> {
+  async crearInvitacion(
+    telefono: string,
+    nivel: string | null,
+    token: string,
+    rol: 'admin' | 'alumno' = 'alumno',
+  ): Promise<Invitacion> {
     const existePendiente = await this.invitacionRepo.findOne({
       where: { telefono, estado: 'pendiente' as EstadoInvitacion },
     });
@@ -29,17 +34,25 @@ export class InvitacionesService {
       throw new BadRequestException('Ya existe una invitación pendiente para este teléfono.');
     }
 
+    // ✅ Validación según rol
+    if (rol === 'alumno' && (!nivel || !nivel.trim())) {
+      throw new BadRequestException('Para invitar alumnos, el nivel es obligatorio.');
+    }
+
     const expira = new Date();
     expira.setDate(expira.getDate() + 7); // 7 días
 
     const invitacion = this.invitacionRepo.create({
       telefono,
-      nivel_asignado: nivel,
       token,
+      rol,
+      nivel_asignado: rol === 'admin' ? null : nivel!.trim(),
       estado: 'pendiente',
       expiraEn: expira,
     });
+
     return this.invitacionRepo.save(invitacion);
   }
+
 
 }

@@ -20,7 +20,7 @@ export class AuthService {
   ) {}
 
   private buildResetUrl(token: string): string {
-    const base = (this.config.get<string>('CLIENT_BASE_URL') || 'https://luciacarlettapilates.com').replace(/\/+$/, '');
+    const base = (this.config.get<string>('CLIENT_BASE_URL') || 'https://agendapilates.thysetech.com').replace(/\/+$/, '');
     return `${base}/reset-password/${token}`;
   }
 

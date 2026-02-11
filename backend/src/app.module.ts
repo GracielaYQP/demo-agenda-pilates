@@ -39,14 +39,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
         `.env.production`,
       ],
     }),
-    // TypeOrmModule.forRoot({
-    //   type: 'postgres',
-    //   url: process.env.DATABASE_URL,
-    //   synchronize: process.env.DB_SYNC === 'true',
-    //   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    //   autoLoadEntities: true,
-     
-    // }),
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,

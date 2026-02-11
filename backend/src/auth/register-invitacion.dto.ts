@@ -1,4 +1,3 @@
-// src/auth/dto/register-invitacion.dto.ts
 import { IsString, IsNotEmpty, IsIn } from 'class-validator';
 
 export class RegisterInvitacionDto {

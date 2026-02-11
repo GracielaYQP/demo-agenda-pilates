@@ -1,4 +1,3 @@
-// src/dashboard/dashboard.cron.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DashboardService } from './dashboard.service';

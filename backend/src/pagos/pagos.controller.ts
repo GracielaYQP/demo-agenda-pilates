@@ -1,4 +1,3 @@
-// pagos.controller.ts
 import { Controller, Get, Post, Body, Query, Delete, Param, ParseIntPipe } from '@nestjs/common';
 import { PagosService } from './pagos.service';
 import { UpsertPagoDto } from './dto/upsert-pago.dto';

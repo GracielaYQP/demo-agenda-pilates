@@ -1,4 +1,3 @@
-// src/invitaciones/invitaciones.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,

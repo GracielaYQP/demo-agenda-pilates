@@ -3,8 +3,6 @@ Object.defineProperty(globalThis, 'crypto', { value: crypto });
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import * as express from 'express';
-
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,12 +13,12 @@ async function bootstrap() {
     'http://127.0.0.1:4200',
     'http://localhost:4300',    
     'http://127.0.0.1:4300',      
-    'https://demoagendapilates.com', 
+    'https://agendapilates.thysetech.com', 
   ];
 
   app.enableCors({
     origin: [
-      'https://demoagendapilates.com',
+      'https://agendapilates.thysetech.com',
       'http://localhost:4200',
       'http://127.0.0.1:4200',
       'http://localhost:4300',     
@@ -35,6 +33,6 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
 
-  await app.listen(process.env.PORT || 3100, '0.0.0.0');
+  await app.listen(process.env.PORT || 3001,'0.0.0.0');
 }
 bootstrap();

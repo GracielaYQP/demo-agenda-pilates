@@ -7,7 +7,7 @@
   width: 100%;
   z-index: 3000;
 
-  background: rgba(246,247,246,.92);           
+  background: rgba(180, 211, 180, 0.92);           
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(8px);

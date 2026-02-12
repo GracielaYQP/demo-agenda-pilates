@@ -48,7 +48,7 @@ export class User {
   @Column('varchar', { nullable: true })
   resetToken?: string | null;
 
-  @Column('timestamp', { nullable: true })
+  @Column('timestamptz', { nullable: true })
   resetTokenExpiry?: Date | null;
 
   @OneToMany(() => Reserva, reserva => reserva.usuario)
@@ -57,10 +57,10 @@ export class User {
   @Column({ default: false })
   esDemo!: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   demoDesde!: Date | null;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   demoHasta!: Date | null;
 
 

@@ -27,7 +27,7 @@ export class RolesGuard implements CanActivate {
     const rol: Role | undefined = user?.rol;
 
     // (opcional) Permití que 'admin' pase cualquier endpoint con roles
-    const hasAccess = !!rol && (rol === 'admin' || requiredRoles.includes(rol as Role));
+    const hasAccess = !!rol && (rol === 'superadmin' || requiredRoles.includes(rol));
 
     if (!hasAccess) {
       throw new ForbiddenException('Acceso restringido: no tenés permisos para esta operación');

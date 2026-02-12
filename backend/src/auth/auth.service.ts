@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from '../users/user.dto';
@@ -8,6 +8,7 @@ import * as bcrypt from 'bcryptjs';
 import { User } from '../users/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { RegisterAdminDemoDto } from './dto/register-admin-demo.dto';
+import { BootstrapAdminDto } from './dto/bootstrap-admin.dto';
 
 
 @Injectable()
@@ -32,7 +33,6 @@ export class AuthService {
   // Login normal
   async loginFlexible(usuario: string, password: string) {
     console.log('🟡 Intentando login con:', usuario);
-
     const user = await this.usersService.findByEmailOrTelefono(usuario);
     if (!user) throw new UnauthorizedException('Usuario no encontrado');
     console.log('👤 Usuario encontrado:', user.telefono);
@@ -40,6 +40,17 @@ export class AuthService {
       throw new ForbiddenException({
         code: 'INACTIVE_USER',
         message: 'Tu cuenta está inactiva. Por favor, comunicate con el estudio para reactivarla.',
+      });
+    }
+
+    // ✅ Bloqueo por demo vencida (aplica a admin/alumno demo)
+    const ahora = new Date();
+    if (user.esDemo && user.demoHasta && user.demoHasta < ahora) {
+      // opcional: también lo desactivás automáticamente
+      await this.usersService.update(user.id, { activo: false });
+      throw new ForbiddenException({
+        code: 'DEMO_EXPIRED',
+        message: 'Tu demo expiró. Contactate para renovar.',
       });
     }
 
@@ -110,7 +121,6 @@ export class AuthService {
     };
   }
 
-
   private normalizarTelefonoArgentina(input: string): string {
     let tel = (input ?? '').replace(/[^\d]/g, '');
 
@@ -150,43 +160,39 @@ export class AuthService {
     return { message: 'Contraseña restablecida exitosamente' };
   }  
 
-  async registrarAdminDemo(dto: RegisterAdminDemoDto) {
-
-    if (process.env.DEMO_MODE !== 'true') {
-      throw new BadRequestException('El registro demo no está habilitado.');
+  async bootstrapAdmin(dto: BootstrapAdminDto, bootstrapKey: string) {
+    const expectedKey = (this.config.get<string>('BOOTSTRAP_KEY') || '').trim();
+    if (!expectedKey) {
+      throw new BadRequestException('BOOTSTRAP_KEY no está configurada en el servidor');
     }
 
-    const existente = await this.usersService.findByEmail(dto.email);
-    if (existente) {
-      throw new BadRequestException('Ya existe un usuario con ese email.');
+    if ((bootstrapKey || '').trim() !== expectedKey) {
+      throw new ForbiddenException('Bootstrap key inválida');
     }
 
-    const ahora = new Date();
-    const demoHasta = new Date();
-    demoHasta.setDate(ahora.getDate() + 10); // 10 días de demo
+    // ✅ Bloquear si ya existe admin o superadmin activo
+    const existe = await this.usersService.existsAnyAdminLike();
+    if (existe) {
+      throw new ConflictException('Ya existe un admin/superadmin. Bootstrap deshabilitado.');
+    }
 
-    const user = await this.usersService.createAdminDemo({
+    // ✅ Crear usuario con create() (queda "alumno" por default)
+    const user = await this.usersService.create({
+      dni: dto.dni,
       email: dto.email,
       nombre: dto.nombre,
       apellido: dto.apellido,
-      dni: dto.dni,
       telefono: dto.telefono,
-      password: hashed,
-      nivel: dto.nivel,
-      planMensual: dto.planMensual,
-      rol: 'admin',
-      esDemo: true,
-      demoDesde: ahora,
-      demoHasta,
+      password: dto.password,
+      nivel: 'Básico',
+      planMensual: '0',
     });
 
-    const token = await this.loginWithUser(user);
+    // ✅ Elevar a superadmin
+    await this.usersService.update(user.id, { rol: 'superadmin', activo: true });
 
-    return {
-      message: `Demo creado. Expira el ${demoHasta.toLocaleDateString()}`,
-      access_token: token.access_token,
-      user,
-    };
+    // ✅ Autologin (devuelve access_token, rol, etc.)
+    return this.loginFlexible(dto.email, dto.password);
   }
 
 }

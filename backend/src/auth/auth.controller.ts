@@ -1,4 +1,4 @@
-import { Controller, Post, Body, BadRequestException, NotFoundException, Param, Get, UsePipes, ValidationPipe, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, NotFoundException, Param, Get, UsePipes, ValidationPipe, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { InvitacionesService } from '../invitaciones/invitaciones.service';
 import { RegisterInvitacionDto } from './register-invitacion.dto';
@@ -9,6 +9,7 @@ import { Public } from './public.decorator';
 import { JwtAuthGuard } from './jwt.guard';
 import { RolesGuard } from './roles.guard';
 import { Roles } from './roles.decorator';
+import { BootstrapAdminDto } from './dto/bootstrap-admin.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -42,7 +43,7 @@ export class AuthController {
     }
 
     const esAdmin = invitacion.rol === 'admin';
-
+  
     // ✅ Si es alumno, nivel debe existir
     if (!esAdmin && (!invitacion.nivel_asignado || !invitacion.nivel_asignado.trim())) {
       throw new BadRequestException('Invitación inválida: falta nivel asignado.');
@@ -61,9 +62,18 @@ export class AuthController {
       planMensual: esAdmin ? '0' : dto.planMensual,
     });
 
-    // ✅ si era invitación admin, elevar rol
+    // ✅ si era invitación admin: elevar rol + setear demo 10 días
     if (esAdmin) {
-      await this.usersService.update(user.id, { rol: 'admin' });
+      const ahora = new Date();
+      const demoHasta = new Date(ahora);
+      demoHasta.setDate(ahora.getDate() + 10);
+
+      await this.usersService.update(user.id, {
+        rol: 'admin',
+        esDemo: true,
+        demoDesde: ahora,
+        demoHasta: demoHasta,
+      });
     }
 
     // ✅ marcar invitación usada
@@ -79,24 +89,30 @@ export class AuthController {
     };
   }
 
-
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post('invitar')
-  async invitar(@Body() dto: { telefono: string; nivel?: string; rol?: 'admin' | 'alumno' }) {
-
+  async invitar(
+    @Body() dto: { telefono: string; nivel?: string; rol?: 'admin' | 'alumno' },
+    @Req() req: any,
+  ) {
     if (!dto.telefono) {
       throw new BadRequestException('Teléfono es requerido');
     }
 
-    const rol: 'admin' | 'alumno' = dto.rol ?? 'alumno';
+    const usuarioActual = req.user;
+    const rolSolicitado: 'admin' | 'alumno' = dto.rol ?? 'alumno';
 
-    // ✅ nivel solo obligatorio para alumno
-    if (rol === 'alumno' && (!dto.nivel || !dto.nivel.trim())) {
+    // 🔐 Si intenta invitar admin y NO es superadmin → bloquear
+    if (rolSolicitado === 'admin' && usuarioActual.rol !== 'superadmin') {
+      throw new ForbiddenException('Solo el superadmin puede invitar administradores');
+    }
+
+    // ✅ nivel obligatorio solo para alumno
+    if (rolSolicitado === 'alumno' && (!dto.nivel || !dto.nivel.trim())) {
       throw new BadRequestException('Nivel es requerido para invitar alumnos');
     }
 
-    // Buscar usuario por teléfono
     const user = await this.usersService.findByTelefono(dto.telefono);
 
     if (user) {
@@ -113,15 +129,54 @@ export class AuthController {
       }
     }
 
-    // Si no existe, generamos invitación
+    const token = uuidv4();
+    const nivel = rolSolicitado === 'admin' ? null : dto.nivel!.trim();
+
+    await this.invitacionesService.crearInvitacion(
+      dto.telefono,
+      nivel,
+      token,
+      rolSolicitado,
+    );
+
+    return { token, rol: rolSolicitado };
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('superadmin')
+  @Post('invitar-admin')
+  async invitarAdmin(@Body() dto: { telefono: string }) {
+
+    if (!dto.telefono) {
+      throw new BadRequestException('Teléfono es requerido');
+    }
+
+    const user = await this.usersService.findByTelefono(dto.telefono);
+
+    if (user) {
+      if (user.activo) {
+        throw new BadRequestException('Este usuario ya está registrado y activo.');
+      } else {
+        return {
+          reactivar: true,
+          userId: user.id,
+          telefono: user.telefono,
+          nombre: user.nombre,
+          mensaje: 'Este usuario ya estaba registrado como inactivo y fue reactivado.',
+        };
+      }
+    }
+
     const token = uuidv4();
 
-    // 👇 si es admin, nivel va null
-    const nivel = rol === 'admin' ? null : dto.nivel!.trim();
+    await this.invitacionesService.crearInvitacion(
+      dto.telefono,
+      null,
+      token,
+      'admin'
+    );
 
-    await this.invitacionesService.crearInvitacion(dto.telefono, nivel, token, rol);
-
-    return { token, rol };
+    return { token, rol: 'admin' };
   }
 
   @Public()
@@ -155,6 +210,14 @@ export class AuthController {
     return this.authService.sendResetPasswordWhatsappLinkByUsuario(body.usuario);
   }
 
+  @Public()
+  @Post('bootstrap-admin')
+  async bootstrapAdmin(@Body() dto: BootstrapAdminDto, @Req() req: any) {
+    const key = req.headers['x-bootstrap-key'] as string | undefined;
+    if (!key) throw new BadRequestException('Falta header x-bootstrap-key');
+
+    return this.authService.bootstrapAdmin(dto, key);
+  }
 
 }
 

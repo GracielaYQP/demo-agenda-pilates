@@ -28,6 +28,7 @@ export class UsersService {
     nivel: string;
     planMensual: '0' |'4' | '8' | '12';
   }): Promise<User> {
+
     // Validar email único
     const existingEmail = await this.userRepository.findOne({
       where: { email: userData.email },
@@ -44,15 +45,14 @@ export class UsersService {
       throw new BadRequestException('El DNI ya está registrado');
     }
 
-    // 🚨 Validar que la contraseña no esté repetida
-    const existingUsers = await this.userRepository.find();
-    for (const existing of existingUsers) {
-      const isSame = await bcrypt.compare(userData.password, existing.password);
-      if (isSame) {
-        throw new BadRequestException('La contraseña ya está en uso. Elegí una diferente.');
-      }
+    // Validar teléfono único
+    const existingTel = await this.userRepository.findOne({
+      where: { telefono: userData.telefono },
+    });
+    if (existingTel) {
+      throw new BadRequestException('El teléfono ya está registrado');
     }
-
+    
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const planStr = String(userData.planMensual) as '0' | '4' | '8' | '12';
     const user = this.userRepository.create({
@@ -68,11 +68,6 @@ export class UsersService {
 
     return await this.userRepository.save(user);
   }
-
-  async createAdminDemo(data: Partial<User>): Promise<User> {
-  const user = this.userRepository.create(data);
-  return this.userRepository.save(user);
-}
 
   async findByEmail(email: string): Promise<User | undefined> {
     const user = await this.userRepository.findOne({ where: { email } });
@@ -158,6 +153,22 @@ export class UsersService {
       console.log(`Eliminando reserva con ID: ${reserva.id} del horario ${reserva.horario.id}`);
     }
 
+  }
+
+  async existsAnyAdminLike(): Promise<boolean> {
+    const count = await this.userRepository.count({
+      where: [
+        { rol: 'superadmin', activo: true } as any,
+        { rol: 'admin', activo: true } as any,
+      ],
+    });
+    return count > 0;
+  }
+
+  async countAdminsActivos(): Promise<number> {
+    return this.userRepository.count({
+      where: { rol: 'admin', activo: true } as any,
+    });
   }
 
   async findByEmailOrTelefono(usuario: string): Promise<User | undefined> {

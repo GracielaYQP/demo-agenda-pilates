@@ -40,11 +40,11 @@ export class Reserva {
 
 
   @ManyToOne(() => Horario, horario => horario.reservas, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'horarioId' }) // 👈 asegurate de tener esto
+  @JoinColumn({ name: 'horarioId' }) 
   horario!: Horario;
 
   @ManyToOne(() => User, user => user.reservas, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'usuarioId' }) // 👈 esto también
+  @JoinColumn({ name: 'usuarioId' })
   usuario!: User;
 
 }

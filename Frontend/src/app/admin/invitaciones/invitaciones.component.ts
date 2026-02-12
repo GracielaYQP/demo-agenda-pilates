@@ -23,29 +23,81 @@ export class InvitacionesComponent {
   private api = environment.apiUrl;
   private frontBaseUrl = environment.frontBaseUrl;
 
+  private aplicarReglasRol(rol: 'admin' | 'alumno') {
+    const nivelCtrl = this.form.get('nivel')!;
+    if (rol === 'admin') {
+      nivelCtrl.clearValidators();
+      nivelCtrl.setValue('');
+    } else {
+      nivelCtrl.setValidators([Validators.required]);
+    }
+    nivelCtrl.updateValueAndValidity({ emitEvent: false });
+  }
 
   constructor( private router: Router, private fb: FormBuilder, private http: HttpClient, public auth: AuthService) {
     this.form = this.fb.group({
       telefono: ['', [Validators.required, Validators.pattern(/^[0-9]{10,13}$/)]],
-      nivel: ['', Validators.required],
+      nivel: [''],
+      rol: ['alumno'],
     });
+
+    this.form.get('rol')!.valueChanges.subscribe((rol) => {
+      this.aplicarReglasRol(rol as 'admin' | 'alumno');
+    });
+
+    // inicializa según valor inicial
+    this.aplicarReglasRol(this.form.get('rol')!.value as 'admin' | 'alumno'); 
+
   }
  
   get esAdmin(): boolean {
-    return localStorage.getItem('rol') === 'admin' && this.auth.isLoggedIn();
+    const rol = (localStorage.getItem('rol') || '').toLowerCase();
+    return (rol === 'admin' || rol === 'superadmin') && this.auth.isLoggedIn();
   }
-  
+
   async enviarInvitacion() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
+    // 1) rol elegido (si no existe control "rol", queda alumno)
+    const rolForm = (this.form.value.rol ?? 'alumno') as 'admin' | 'alumno';
+    const rol: 'admin' | 'alumno' = this.esSuperadmin ? rolForm : 'alumno';
+
+
+    // 2) armar payload mínimo
+    const payload: any = {
+      telefono: (this.form.value.telefono ?? '').toString().trim(),
+      rol,
+    };
+
+    // 3) si es alumno, nivel obligatorio
+    if (rol === 'alumno') {
+      const nivel = (this.form.value.nivel ?? '').toString().trim();
+      if (!nivel) {
+        this.error = 'Seleccioná un nivel para invitar alumnos.';
+        this.success = '';
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Falta nivel',
+          width: '350px',
+          text: this.error,
+        });
+        return;
+      }
+      payload.nivel = nivel;
+    }
+
+    // 4) endpoint según rol
+    const endpoint =
+      rol === 'admin'
+        ? `${this.api}/auth/invitar-admin`
+        : `${this.api}/auth/invitar`;
+
     try {
-      const res: any = await this.http.post(
-        `${this.api}/auth/invitar`,
-        this.form.value
-      ).toPromise();
+      // 5) llamado usando endpoint + payload (en vez de this.form.value)
+      const res: any = await this.http.post(endpoint, payload).toPromise();
 
       if (res.reactivar && res.userId) {
         const resultado = await Swal.fire({
@@ -66,7 +118,7 @@ export class InvitacionesComponent {
 
           const respuesta: any = await this.http.post(
             `${this.api}/auth/reset-link-whatsapp`,
-            { telefono: res.telefono }
+            { usuario: res.telefono }
           ).toPromise();
 
           this.success = `✅ Usuario reactivado. Se le envió un WhatsApp para restablecer la contraseña.`;
@@ -91,9 +143,10 @@ export class InvitacionesComponent {
 
       if (res.token) {
         const generatedLink = `${this.frontBaseUrl}/#/register?token=${res.token}`;
-        const numeroSinEspacios = this.form.value.telefono.replace(/\s/g, '');
+        this.generatedLink = generatedLink;
+        const numeroSinEspacios = payload.telefono.replace(/\s/g, '');
         const textoPlano = [
-          '¡Hola! Soy Lucía Carletta...',
+          '¡Hola! Soy XXX de Demos Estudio...',
           'Te envío el link para completar tu registro:',
           generatedLink,
           '',
@@ -113,6 +166,7 @@ export class InvitacionesComponent {
 
         const texto = encodeURIComponent(textoPlano);
         const linkWhatsapp = `https://wa.me/54${numeroSinEspacios}?text=${texto}`;
+        this.linkWhatsapp = linkWhatsapp;
 
         const result = await Swal.fire({
           title: 'Invitación lista',
@@ -166,5 +220,10 @@ export class InvitacionesComponent {
   cerrarFormulario(): void {
     this.router.navigate(['/gestion-turnos']);
   }
+
+  get esSuperadmin(): boolean {
+    return (localStorage.getItem('rol') || '').toLowerCase() === 'superadmin' && this.auth.isLoggedIn();
+  }
+
 
 }

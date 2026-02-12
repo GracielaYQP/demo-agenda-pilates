@@ -37,6 +37,8 @@ export class RegistroComponent implements OnInit, OnDestroy {
   mostrarModal = false;
   private _modalTimer: any;
 
+  isAdminInvite = false;
+
   @HostListener('document:keydown.escape')
   onEsc() { if (this.mostrarNoInvitacion) this.cerrarNoInvitacion(); }
 
@@ -51,7 +53,9 @@ export class RegistroComponent implements OnInit, OnDestroy {
   // ------------------ Ciclo de vida ------------------
   ngOnInit() {
     // 1) Determinar admin por rol
-    this.isAdmin = (localStorage.getItem('rol') || '').toLowerCase() === 'admin';
+    const rol = (localStorage.getItem('rol') || '').toLowerCase();
+    this.isAdmin = (rol === 'admin' || rol === 'superadmin');
+
 
     // 2) Detectar si vino con token de invitación
     const token = this.route.snapshot.queryParamMap.get('token');
@@ -84,16 +88,26 @@ export class RegistroComponent implements OnInit, OnDestroy {
   // ------------------ Invitación ------------------
   private validarInvitacion(token: string) {
     this.invitacionService.getInvitacion(token).subscribe({
-      next: (res: { telefono: string; nivel: string }) => {
+      next: (res) => {
         this.invitacionValida = true;
         this.telefono = res.telefono;
-        this.nivel = res.nivel;
+        this.nivel = res.nivel ?? '';
 
-        // ⬇️ Esto muestra los valores en los inputs deshabilitados
+        // si la invitación era admin, no muestres nivel/plan como alumno
+        this.isAdminInvite = (res.rol === 'admin');
+
+        // Esto muestra los valores en los inputs deshabilitados
         this.form.patchValue({
           telefono: res.telefono,
-          nivel: res.nivel,
+          nivel: res.nivel ?? 'Básico',
         });
+
+        // si es admin invitado: planMensual fijo 0 y ocultás el select
+        if (this.isAdminInvite) {
+          this.nivel = ''; // no aplica
+          this.form.patchValue({ nivel: 'Básico', planMensual: '0' });
+          this.form.get('planMensual')?.disable({ emitEvent: false });
+        }
       },
       error: () => {
         this.invitacionValida = false;
@@ -102,8 +116,7 @@ export class RegistroComponent implements OnInit, OnDestroy {
       },
     });
   }
-
-
+  
   // ------------------ Formulario ------------------
   private crearFormulario() {
     this.form = this.fb.group({
@@ -140,12 +153,13 @@ export class RegistroComponent implements OnInit, OnDestroy {
   submit() {
     if (this.form.invalid) return;
 
-    const raw = this.form.getRawValue();
+    this.error = '';
+    this.successMessage = '';
 
-    // Normalizo plan
+    const raw = this.form.getRawValue();
     const planMensual = String(raw.planMensual ?? '0');
 
-    // 🔹 CASO 1: Registro por invitación (link con token)
+    // ✅ CASO 1: Registro por invitación (AUTLOGIN)
     if (this.esInvitacion && this.invitacionValida && this.tokenInvitacion) {
       const payloadInvitacion = {
         dni: raw.dni,
@@ -153,27 +167,48 @@ export class RegistroComponent implements OnInit, OnDestroy {
         apellido: raw.apellido,
         email: raw.email,
         password: raw.password,
-        planMensual,
-        telefono: this.telefono,         // 👈 viene de la invitación
-        token: this.tokenInvitacion,     // 👈 token obligatorio para el DTO
+        planMensual,                     // si es admin invitado en tu UI: queda en '0'
+        telefono: this.telefono,         // viene de la invitación
+        token: this.tokenInvitacion,     // obligatorio
       };
 
       this.auth.registerInvitacion(payloadInvitacion).subscribe({
-        next: () => {
-          this.successMessage = '¡Registro exitoso!';
+        next: (res: any) => {
+          this.successMessage = '¡Registro exitoso! Iniciando sesión...';
           this.error = '';
-          setTimeout(() => this.router.navigate(['/login']), 1500);
+
+          // guardar token si vino (tu backend devuelve autologin)
+          const token = res?.access_token ?? res?.token;
+          if (token) {
+            localStorage.setItem('token', token);
+            localStorage.setItem('nombreUsuario', res.nombre ?? '');
+            localStorage.setItem('apellidoUsuario', res.apellido ?? '');
+            localStorage.setItem('rol', res.rol ?? '');
+            if (res.nivel) localStorage.setItem('nivelUsuario', res.nivel);
+            if (res.planMensual) localStorage.setItem('planMensual', String(res.planMensual));
+          }
+
+          const rol = String(res?.rol ?? '').toLowerCase();
+
+          setTimeout(() => {
+            if (rol === 'admin' || rol === 'superadmin') {
+              this.router.navigate(['/gestion-turnos']);
+            } else {
+              this.router.navigate(['/horarios-disponibles']);
+            }
+          }, 600);
         },
         error: (err) => {
           const msg = err?.error?.message ?? 'Error al registrar (invitación)';
           this.error = Array.isArray(msg) ? msg.join(' • ') : msg;
+          this.successMessage = '';
         },
       });
 
-      return; // 👉 importante salir acá
+      return;
     }
 
-    // 🔹 CASO 2: Registro "manual" (admin)
+    // ✅ CASO 2: Registro manual (admin) -> /users (SIN autologin)
     const payload = {
       dni: raw.dni,
       nombre: raw.nombre,
@@ -181,23 +216,23 @@ export class RegistroComponent implements OnInit, OnDestroy {
       email: raw.email,
       password: raw.password,
       planMensual,
-      telefono: this.isAdmin ? raw.telefono : raw.telefono,
-      nivel: this.isAdmin ? raw.nivel : raw.nivel,
+      telefono: raw.telefono,
+      nivel: raw.nivel,
     };
 
     this.auth.register(payload).subscribe({
       next: () => {
         this.successMessage = '¡Registro exitoso!';
         this.error = '';
-        setTimeout(() => this.router.navigate(['/login']), 1500);
+        setTimeout(() => this.router.navigate(['/login']), 1200);
       },
       error: (err) => {
         const msg = err?.error?.message ?? 'Error al registrar';
         this.error = Array.isArray(msg) ? msg.join(' • ') : msg;
+        this.successMessage = '';
       },
     });
   }
-
 
   // ------------------ Helpers UI ------------------
   get Dni() { return this.form.get('dni'); }

@@ -40,7 +40,7 @@
           }
         </div>
 
-        <div class="form-group">
+        <div class="form-group" *ngIf="!isAdminInvite">
           <label for="planMensual">Plan mensual:</label>
           <select id="planMensual" formControlName="planMensual">
             <option value="">Seleccionar plan</option>
@@ -55,13 +55,13 @@
         </div>
 
         <!-- Si hay invitación, mostrar solo valor precargado de nivel -->
-        <div class="form-group" *ngIf="invitacionValida && !isAdmin; else nivelManual">
+        <div class="form-group" *ngIf="invitacionValida && !isAdminInvite; else nivelManual">
           <label for="nivel">Nivel asignado:</label>
           <input id="nivel" type="text" [value]="nivel" readonly />
         </div>
         <!-- Si NO hay invitación o es admin, mostrar campo editable de nivel -->
         <ng-template #nivelManual>
-          <div class="form-group">
+          <div class="form-group" *ngIf="!isAdminInvite">
             <label for="nivel">Nivel:</label>
             <select id="nivel" formControlName="nivel">
               <option value="">Seleccionar nivel</option>
@@ -76,7 +76,7 @@
         </ng-template>
 
                 <!-- Si hay invitación, mostrar solo valor precargado de telefono -->
-        <div class="form-group" *ngIf="invitacionValida && !isAdmin; else telefonoManual">
+        <div class="form-group" *ngIf="esInvitacion; else telefonoManual">
           <label for="telefono">Teléfono:</label>
           <input id="telefono" type="text" [value]="telefono" readonly />
         </div>

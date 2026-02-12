@@ -25,7 +25,8 @@ export class InvitacionesController {
     return {
       valida: true,
       telefono: invitacion.telefono,
-      nivel: invitacion.nivel_asignado,
+      rol: invitacion.rol, 
+      nivel: invitacion.rol === 'alumno' ? invitacion.nivel_asignado : null,
     };
   }
 }

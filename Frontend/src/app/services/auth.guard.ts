@@ -18,9 +18,9 @@ export class AuthGuard implements CanActivate{
     if (allowed.length === 0) return true; // si la ruta no pide roles, pasa
 
     const allowedNorm = allowed.map(r => r.toLowerCase());
-    const tieneRol = Array.isArray(userRole)
-      ? userRole.some(r => allowedNorm.includes(r))
-      : allowedNorm.includes(userRole);
+    const tieneRol =
+      allowedNorm.includes(userRole) ||
+      (userRole === 'superadmin' && allowedNorm.includes('admin'));
 
     if (!tieneRol) {
       this.router.navigate(['/']); // o una página 403

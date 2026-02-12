@@ -4,15 +4,26 @@
       <p class="titulo-registro">Enviar invitación</p>
 
       <form [formGroup]="form" (ngSubmit)="enviarInvitacion()">
+        <!-- ✅ Rol -->
+        <div class="form-group" *ngIf="esSuperadmin">
+          <label for="rol">Tipo de invitación:</label>
+          <select id="rol" formControlName="rol">
+            <option value="alumno">Alumno/a</option>
+            <option value="admin">Administrador/a</option>
+          </select>
+        </div>
+
+        <!-- Teléfono -->
         <div class="form-group">
-          <label for="telefono">Teléfono alumno/a:</label>
+          <label for="telefono">Teléfono:</label>
           <input id="telefono" type="text" formControlName="telefono" />
           <p class="text-danger" *ngIf="form.get('telefono')?.invalid && form.get('telefono')?.touched">
             Ingresa un teléfono válido.
           </p>
         </div>
 
-        <div class="form-group">
+        <!-- ✅ Nivel (solo si rol = alumno) -->
+        <div class="form-group" *ngIf="form.get('rol')?.value !== 'admin'">
           <label for="nivel">Nivel:</label>
           <select id="nivel" formControlName="nivel">
             <option value="">Seleccionar nivel</option>

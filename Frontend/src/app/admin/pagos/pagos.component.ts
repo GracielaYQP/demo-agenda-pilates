@@ -33,7 +33,7 @@ export class PagosComponent implements OnChanges, OnDestroy {
   @Input() anio!: number;
 
   @Output() confirmar = new EventEmitter<UpsertPago>();
-  @Output() eliminar = new EventEmitter<{ userId: number; mes: number; anio: number }>();
+  @Output() eliminar = new EventEmitter<{ pagoId: number; userId: number }>();
   @Output() cerrar = new EventEmitter<void>();
 
   form!: FormGroup;
@@ -100,8 +100,6 @@ export class PagosComponent implements OnChanges, OnDestroy {
 
     this.confirmar.emit({
       userId: this.alumno.id,
-      mes: this.mes,
-      anio: this.anio,
       planTipo: raw.planTipo as PlanTipo,
       montoARS: +raw.montoARS,
       metodo: raw.metodo,
@@ -110,7 +108,10 @@ export class PagosComponent implements OnChanges, OnDestroy {
   }
 
   onEliminar() {
-    this.eliminar.emit({ userId: this.alumno.id, mes: this.mes, anio: this.anio });
+    const pagoId = this.estado?.pago?.id;
+    if (!pagoId) return; // o mostrás mensaje
+    this.eliminar.emit({ pagoId, userId: this.alumno.id });
+
   }
 
   // --- Helpers ---

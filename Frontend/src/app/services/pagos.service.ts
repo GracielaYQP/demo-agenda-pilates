@@ -7,6 +7,7 @@ export type PlanTipo = 'suelta'|'4'|'8'|'12';
 export type MetodoPago = 'efectivo'|'transferencia'|'mercado_pago'|'otro';
 
 export interface PagoDTO {
+  id: number;
   fechaPago: string;     
   planTipo: PlanTipo;
   montoARS: number;
@@ -14,22 +15,29 @@ export interface PagoDTO {
   notas?: string;
 }
 
+export type FasePago = 'ok' | 'warn' | 'vencido';
 export interface EstadoPago {
   userId: number;
-  mes: number;          
-  anio: number;         
+
+  // ciclo
+  cicloInicio?: string;
+  cicloFin?: string;
+
   isPago: boolean;
+  cicloTerminado?: boolean;
+  debe?: boolean;
+
   pago?: PagoDTO;
+   fase: FasePago;
 }
 
 export interface UpsertPago {
-  userId: number; mes: number; anio: number;
+  userId: number;
   planTipo: PlanTipo;
   montoARS: number;
   metodo?: MetodoPago;
   notas?: string;
 }
-
 
 export interface ResumenPagoItem {
   userId: number;
@@ -80,29 +88,28 @@ export class PagosService {
   private api = environment.apiUrl;
   constructor(private http: HttpClient) {}
 
-  /** Estado de pago del mes/año para un alumno (lo usás para pintar el $ verde/negro y para el modal) */
-  estado(userId: number, mes: number, anio: number): Observable<EstadoPago> {
+  /** Estado de pago del mes/año para un alumno (lo usás para pintar el $ verde/rojo y para el modal) */
+  estado(userId: number): Observable<EstadoPago> {
     return this.http
-      .get<EstadoPago>(`${this.api}/pagos/estado`, { params: { userId, mes, anio } as any })
+      .get<EstadoPago>(`${this.api}/pagos/estado-ciclo-actual`, { params: { userId } as any })
       .pipe(
-        // Normalizá si querés (ej: asegurar que venga número en monto, etc.)
         map(est => {
-          if (est?.pago && typeof est.pago.montoARS === 'string') {
-            est.pago.montoARS = +est.pago.montoARS;
+          if (est?.pago && typeof (est.pago as any).montoARS === 'string') {
+            (est.pago as any).montoARS = +((est.pago as any).montoARS);
           }
           return est;
         })
       );
   }
 
-  /** Crear/editar (upsert) pago del mes/año */
-  confirmar(body: UpsertPago) {
-    return this.http.post(`${this.api}/pagos/confirmar`, body);
+  /** Confirmar pago asociado al ciclo actual */
+  confirmarCiclo(body: UpsertPago) {
+    return this.http.post(`${this.api}/pagos/confirmar-ciclo`, body);
   }
 
-  /** Eliminar pago del mes/año */
-  eliminar(userId: number, mes: number, anio: number) {
-    return this.http.delete(`${this.api}/pagos`, { params: { userId, mes, anio } as any });
+  /** Eliminar pago por id */
+  eliminarPorId(id: number) {
+    return this.http.delete(`${this.api}/pagos/${id}`);
   }
 
   /** Helper: mes/año corrientes (útil en listado y modal) */

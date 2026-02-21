@@ -55,16 +55,17 @@ export class HorariosService {
   }
 
   cargarHorarios() {
-    const token = localStorage.getItem('token');
-    const headers = token ? new HttpHeaders().set('Authorization', `Bearer ${token}`) : undefined;
-
-    this.http
-      .get<HorarioSemana[]>(`${this.api}/horarios/semana`, {
-        headers,
-        // por si el hosting cachea
-        params: { _: Date.now().toString() }
-      })
-      .subscribe(data => this.horariosSubject.next(data || []));
+    const headers = this.buildAuthHeaders();
+    this.http.get<HorarioSemana[]>(`${this.api}/horarios/semana`, {
+      headers,
+      params: { _: Date.now().toString() }
+    }).subscribe({
+      next: data => this.horariosSubject.next(data || []),
+      error: err => {
+        console.warn('❌ cargarHorarios error', err);
+        this.horariosSubject.next([]); // o dejá el anterior si preferís
+      }
+    });
   }
 
   refrescarHorarios() {
@@ -90,14 +91,25 @@ export class HorariosService {
       fechaTurno,
       tipo
     }, { headers }).pipe(
-      tap(() => this.cargarHorarios()),
+      tap(() => this.reservasChangedSubject.next()),
       catchError(err => {
-        // Opcional: UX prolija
         if (err?.status === 401) localStorage.removeItem('token');
         return throwError(() => err);
       })
     );
   }
+
+  editarReserva(reservaId: number, data: any): Observable<any> {
+    const headers = this.buildAuthHeaders();
+    return this.http.patch(`${this.api}/reservas/${reservaId}`, data, { headers }).pipe(
+      tap(() => this.reservasChangedSubject.next()),
+      catchError(err => {
+        if (err?.status === 401) localStorage.removeItem('token');
+        return throwError(() => err);
+      })
+    );
+  }
+
 
   getMisReservas(): Observable<any[]> {
     const token = localStorage.getItem('token');
@@ -123,7 +135,7 @@ export class HorariosService {
           { headers }
       ).pipe(
       tap(() => {
-        this.cargarHorarios();
+        // this.cargarHorarios();
         this.reservasChangedSubject.next();
       })
     );
@@ -159,20 +171,9 @@ export class HorariosService {
       tipo
     }, { headers }).pipe(
       tap(() => {
-        this.cargarHorarios();
+        // this.cargarHorarios();
         this.reservasChangedSubject.next();
       }),
-      catchError(err => {
-        if (err?.status === 401) localStorage.removeItem('token');
-        return throwError(() => err);
-      })
-    );
-  }
-
-  editarReserva(reservaId: number, data: any): Observable<any> {
-    const headers = this.buildAuthHeaders();
-    return this.http.patch(`${this.api}/reservas/${reservaId}`, data, { headers }).pipe(
-      tap(() => this.cargarHorarios()),
       catchError(err => {
         if (err?.status === 401) localStorage.removeItem('token');
         return throwError(() => err);
@@ -218,13 +219,16 @@ export class HorariosService {
 
     return this.http.get<any[]>(url, { headers }).pipe(
       map(rows => (Array.isArray(rows) ? rows : []).map(r => ({
+        ...r,
         horarioId: Number(r.horarioId),
         fechaTurno: String(r.fechaTurno || '').slice(0, 10),
-        cancelada: false
+        estado: String(r.estado || ''),
+        tipo: String(r.tipo || ''),
+        cancelada: (r.cancelada === true) || String(r.estado || '').toLowerCase().includes('cancel')
       }))),
       catchError(err => {
         console.warn('Error al cargar reservas:', err);
-        return of([]); // nunca rompe la grilla
+        return of([]);
       })
     );
   }
@@ -279,7 +283,7 @@ export class HorariosService {
       { headers }
     ).pipe(
       tap(() => {
-        this.cargarHorarios();              // ✅ empuja nuevos horarios al Subject
+        // this.cargarHorarios();            
         this.reservasChangedSubject.next(); // ✅ notifica “cambio” a todas las vistas
       }),
       catchError(err => {

@@ -15,21 +15,25 @@ export const routes: Routes = [
     canActivate: [AuthGuard], 
     loadComponent: () => import('./pages/planes/planes.component').then(m => m.PlanesComponent) 
   },
+  
   {
     path: 'gestion-turnos',
     canActivate: [AuthGuard],
     loadComponent: () => import('./gestion-turnos/gestion-turnos.component').then(m => m.GestionTurnosComponent)
   },
+
   {
     path: 'mis-turnos',
     canActivate: [AuthGuard],
     loadComponent: () => import('./mis-turnos/mis-turnos.component').then(m => m.MisTurnosComponent)
   },
+
   {
     path: 'admin/invitaciones',
     canActivate: [AuthGuard], data: { roles: ['admin'] },
     loadComponent: () => import('./admin/invitaciones/invitaciones.component').then(m => m.InvitacionesComponent)
   },
+  
   {
     path: 'listar-alumnos',
     canActivate: [AuthGuard], data: { roles: ['admin'] },

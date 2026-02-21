@@ -33,6 +33,7 @@ export class AuthService {
     return localStorage.getItem('token');
   }
 
+
   getRol(): string | null {
     return localStorage.getItem('rol');
   }
@@ -69,6 +70,7 @@ export class AuthService {
     );
   }
 
+ 
   resetPassword(token: string, newPassword: string) {
     return this.http.post<any>(`${this.api}/auth/reset-password`, { token, newPassword });
   }
@@ -97,6 +99,7 @@ export class AuthService {
   }) {
     return this.http.post(`${this.api}/auth/register-invitacion`, data);
   }
+
 
 }
 

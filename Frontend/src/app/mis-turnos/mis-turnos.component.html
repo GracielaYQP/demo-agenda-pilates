@@ -1,13 +1,18 @@
 <div class="table-container" *ngIf="dias.length && horas.length" translate="no">
-  <h2>Mis turnos</h2>
-  <!-- <div *ngIf="cantidadRecuperaciones > 0" class="aviso-recuperacion-fijo">
-    🔁 Tenés {{ cantidadRecuperaciones }} clase{{ cantidadRecuperaciones > 1 ? 's' : '' }} de recuperación esta semana.
-  </div> -->
+  <div class="titulo-con-boton">
+    <h2>Mis turnos</h2>
+
+    <button class="btn-asistencia"
+            (click)="verMiAsistencia()">
+      📊 VER MI ASISTENCIA
+    </button>
+  </div>
+
   <div *ngIf="avisoSemana as aviso" class="aviso-recuperacion-fijo">
     🔁 Tenés {{ aviso.count }} {{ aviso.label }} esta semana.
   </div>
 
-  <table>
+  <table class="tabla-turnos">
     <thead>
       <tr>
         <th>Horario</th>
@@ -28,8 +33,10 @@
                   nivelCss(getNivel(dia, hora)),
                   hasReserva(dia, hora) ? 'con-reserva' : '',
                   esRecuperacion(dia, hora) ? 'recuperacion' : '',
-                  esSuelta(dia, hora) ? 'suelta' : ''
+                  esSuelta(dia, hora) ? 'suelta' : '',
+                  esCanceladaMomentanea(dia, hora) ? 'cancelada' : ''
                 ]"
+
                 [title]="esRecuperacion(dia, hora) ? 'Clase de recuperación' : (esSuelta(dia, hora) ? 'Clase suelta' : 'Clase regular')"
                 (click)="abrirModalDesdeCelda(dia, hora)">
                 <div class="nivel"> {{ getNivel(dia, hora) }}</div>
@@ -37,6 +44,8 @@
                   {{ getNombreCompleto(dia, hora) }}
                   <span *ngIf="esRecuperacion(dia, hora)" class="badge-recup">(Recup)</span>
                   <span *ngIf="esSuelta(dia, hora)" class="badge-suelta">(Suelta)</span>
+                  <span *ngIf="esCanceladaMomentanea(dia, hora)" class="badge-cancelada">(Cancelada)</span>
+
                 </div>
               </div>
             </ng-container>
@@ -123,7 +132,208 @@
     </div>
   </div>
 </div>
+<!-- Modal asistencia  -->
+<div *ngIf="modalAsistencia" class="modal-overlay">
+  <div class="modal-content-asistencia">
+    <h3>
+      Asistencias de<br />
+      <span class="nombre-alumno">{{ asistenciaNombre }} {{ asistenciaApellido }}</span>
+    </h3>
+
+    <table class="tabla-asistencia">
+      <thead>
+        <tr>
+          <th>Ciclo Actual</th>
+          <th>Asistidas</th>
+          <th>Recuperadas</th>
+          <th>Canceladas</th>
+          <th>Estudio Cerrado</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <ng-container *ngIf="asistenciaCicloActual as ciclo; else sinCicloActual">
+          <tr>
+            <!-- CICLO -->
+            <td>
+              <div>
+                {{ formatearFechaAR(ciclo.cicloInicio) }}
+                →
+                {{ formatearFechaAR(ciclo.cicloFin || ciclo.finVentana) }}
+              </div>
+
+              <div class="sublinea">
+                <em>
+                  Clases del plan asistidas al día de hoy:
+                  {{ (ciclo.asistidas || 0) + (ciclo.recuperadas || 0) }}
+                </em>
+              </div>
+
+              <div class="sublinea" *ngIf="ciclo.sueltas">
+                <em>Clases sueltas en el ciclo: {{ ciclo.sueltas }}</em>
+              </div>
+            </td>
+
+            <!-- ASISTIDAS -->
+            <td>
+              <div><strong>Total:</strong> {{ ciclo.asistidas ?? 0 }}</div>
+              <div *ngIf="ciclo.fechasAsistidas?.length">
+                <small *ngFor="let f of ordenarFechasAsc(ciclo.fechasAsistidas)">
+                  •&nbsp; {{ formatearFechaAR(f) }}<br />
+                </small>
+              </div>
+            </td>
+
+            <!-- RECUPERADAS -->
+            <td>
+              <div><strong>Total:</strong> {{ ciclo.recuperadas ?? 0 }}</div>
+              <div *ngIf="ciclo.fechasRecuperadas?.length">
+                <small *ngFor="let f of ordenarFechasAsc(ciclo.fechasRecuperadas)">
+                  •&nbsp; {{ formatearFechaAR(f) }}<br />
+                </small>
+              </div>
+            </td>
+
+            <!-- CANCELADAS -->
+            <td>
+              <div><strong>Total:</strong> {{ ciclo.canceladas ?? 0 }}</div>
+              <div *ngIf="ciclo.fechasCanceladas?.length">
+                <small *ngFor="let f of ordenarFechasAsc(ciclo.fechasCanceladas)">
+                  •&nbsp; {{ formatearFechaAR(f) }}<br />
+                </small>
+              </div>
+            </td>
+
+            <!-- ESTUDIO CERRADO -->
+            <td>
+              <div><strong>Total:</strong> {{ ciclo.cerrado ?? 0 }}</div>
+              <div *ngIf="ciclo.fechasCerrado?.length">
+                <small *ngFor="let f of ordenarFechasAsc(ciclo.fechasCerrado)">
+                  •&nbsp; {{ formatearFechaAR(f) }}<br />
+                </small>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+
+        <ng-template #sinCicloActual>
+          <tr>
+            <td colspan="5" style="text-align:center; padding: 14px;">
+              <em>No hay ciclo activo todavía.</em>
+            </td>
+          </tr>
+        </ng-template>
+  
+      </tbody>
+    </table>
+    <div class="acciones-asistencia">
+      <button class="btn-secundario" (click)="abrirHistorialCiclos()" [disabled]="!tieneHistorialFinalizado">
+        Ver historial
+      </button>
+
+      <button class="btn-cerrar" (click)="cerrarModalAsistencia()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal historial de ciclos -->
+<div *ngIf="modalHistorialCiclos" class="modal-overlay">
+  <div class="modal-content-asistencia" style="max-width: 880px;">
+    <h3>
+      Historial de ciclos 
+      <span class="nombre-alumno">{{ asistenciaNombre }} {{ asistenciaApellido }}</span>
+    </h3>
+
+    <div *ngFor="let bloque of historialPorAnio; trackBy: trackByAnio" class="bloque-anio">
+      <h4 class="anio-titulo">{{ bloque.anio }}</h4>
+
+      <div *ngFor="let ciclo of bloque.ciclos; trackBy: trackByCiclo" class="ciclo-card">
+        
+        <!-- HEADER DEL CICLO -->
+        <div class="ciclo-header">
+          <div class="ciclo-fechas">
+            {{ formatearFechaAR(ciclo.cicloInicio) }}
+            →
+            {{ formatearFechaAR(ciclo.cicloFin || ciclo.finVentana) }}
+          </div>
+
+          <button
+            class="btn-toggle"
+            (click)="toggleCiclo(ciclo)">
+            {{ isCicloExpandido(ciclo) ? 'Ocultar detalle ▲' : 'Ver detalle ▼' }}
+          </button>
+        </div>
+
+        <!-- RESUMEN -->
+        <div class="ciclo-resumen">
+          <span><strong>Asistidas:</strong> {{ ciclo.asistidas ?? 0 }}</span>
+          <span><strong>Recup:</strong> {{ ciclo.recuperadas ?? 0 }}</span>
+          <span><strong>Cancel:</strong> {{ ciclo.canceladas ?? 0 }}</span>
+          <span><strong>Cerrado:</strong> {{ ciclo.cerrado ?? 0 }}</span>
+          <span *ngIf="ciclo.sueltas"><strong>Sueltas:</strong> {{ ciclo.sueltas }}</span>
+        </div>
+
+        <!-- DETALLE EXPANDIDO -->
+        <div *ngIf="isCicloExpandido(ciclo)" class="ciclo-detalle">
+
+          <!-- ASISTIDAS -->
+          <div class="detalle-col">
+            <strong>Asistidas</strong>
+
+            <ng-container *ngIf="ciclo.fechasAsistidas?.length; else noAsistidasTpl">
+              <small *ngFor="let f of ordenarFechasAsc(ciclo.fechasAsistidas)">
+                • {{ formatearFechaAR(f) }}<br />
+              </small>
+            </ng-container>
+
+            <ng-template #noAsistidasTpl><em>—</em></ng-template>
+          </div>
+
+          <!-- RECUPERADAS -->
+          <div class="detalle-col">
+            <strong>Recuperadas</strong>
+
+            <ng-container *ngIf="ciclo.fechasRecuperadas?.length; else noRecupTpl">
+              <small *ngFor="let f of ordenarFechasAsc(ciclo.fechasRecuperadas)">
+                • {{ formatearFechaAR(f) }}<br />
+              </small>
+            </ng-container>
+
+            <ng-template #noRecupTpl><em>—</em></ng-template>
+          </div>
+
+          <!-- CANCELADAS -->
+          <div class="detalle-col">
+            <strong>Canceladas</strong>
+
+            <ng-container *ngIf="ciclo.fechasCanceladas?.length; else noCancelTpl">
+              <small *ngFor="let f of ordenarFechasAsc(ciclo.fechasCanceladas)">
+                • {{ formatearFechaAR(f) }}<br />
+              </small>
+            </ng-container>
+
+            <ng-template #noCancelTpl><em>—</em></ng-template>
+          </div>
+
+          <!-- CERRADO -->
+          <div class="detalle-col">
+            <strong>Estudio cerrado</strong>
+
+            <ng-container *ngIf="ciclo.fechasCerrado?.length; else noCerradoTpl">
+              <small *ngFor="let f of ordenarFechasAsc(ciclo.fechasCerrado)">
+                • {{ formatearFechaAR(f) }}<br />
+              </small>
+            </ng-container>
+
+            <ng-template #noCerradoTpl><em>—</em></ng-template>
+          </div>
 
 
+        </div>
+      </div>
+    </div>
 
+    <button class="btn-cerrar" (click)="cerrarHistorialCiclos()">Cerrar</button>
+  </div>
+</div>
 

@@ -9,8 +9,12 @@ export const routes: Routes = [
   { path: 'register', loadComponent: () => import('./auth/registro/registro.component').then(m => m.RegistroComponent) },
   { path: 'clases', loadComponent: () => import('./pages/clases/clases.component').then(m => m.ClasesComponent) },
   { path: 'horarios-disponibles', loadComponent: () => import('./horarios-disponibles/horarios-disponibles.component').then(m => m.HorariosDisponiblesComponent) },
-  { path: 'planes', loadComponent: () => import('./pages/planes/planes.component').then(m => m.PlanesComponent) },
   { path: 'dashboard-tabs', loadComponent: () => import('./admin/dashboard-tabs/dashboard-tabs.component').then(m => m.DashboardTabsComponent) },
+  { 
+    path: 'planes',
+    canActivate: [AuthGuard], 
+    loadComponent: () => import('./pages/planes/planes.component').then(m => m.PlanesComponent) 
+  },
   {
     path: 'gestion-turnos',
     canActivate: [AuthGuard],

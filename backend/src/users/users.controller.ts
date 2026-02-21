@@ -4,6 +4,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './user.entity';
 import { ILike, Repository } from 'typeorm';
 import { CreateUserDto } from './user.dto';
+import { JwtAuthGuard } from 'src/auth/jwt.guard';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { Roles } from 'src/auth/roles.decorator';
 
 
 @Controller('users')
@@ -14,6 +17,8 @@ export class UsersController {
     private userRepository: Repository<User>
   ) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'superadmin') 
   @Post()
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);

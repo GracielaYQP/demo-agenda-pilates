@@ -7,9 +7,7 @@ import { environment } from '@env/environment';
 import { EstadoPago, PagosService, UpsertPago } from '../../services/pagos.service';
 import { HorariosService } from '../../services/horarios.service';
 import { PagosComponent } from '../pagos/pagos.component';
-
-
-
+import { catchError, forkJoin, of } from 'rxjs';
 
 interface Alumno {
   id: number;
@@ -45,7 +43,7 @@ export class ListarAlumnosComponent implements OnInit {
   asistenciaNombre: string = '';
   asistenciaApellido: string = '';
   asistenciaData: any = {};
-  asistenciaMeses: string[] = []; 
+  asistenciaCiclos: any[] = []; 
   mostrarInactivos: boolean = false; 
   modalConfirmacionReactivar = false;
   mesActual = new Date().getMonth() + 1;   // 1..12
@@ -56,7 +54,11 @@ export class ListarAlumnosComponent implements OnInit {
   historialOpen = false;
   historialAlumno?: { id:number; nombre:string; apellido:string };
   historialPagos: Array<{ anio:number; mes:number; fechaPago:string; planTipo:string; montoARS:number; metodo?:string; notas?:string }> = [];
-
+  asistenciaCicloActual: any | null = null;
+  modalHistorialCiclos = false;
+  historialPorAnio: Array<{ anio: number; ciclos: any[] }> = [];
+  expandedCiclos = new Set<string>();
+  mostrarEmail: boolean = false;
 
   private api = environment.apiUrl;
 
@@ -66,6 +68,10 @@ export class ListarAlumnosComponent implements OnInit {
     private horariosService: HorariosService,
     private pagosSrv: PagosService
   ) {}
+
+  trackByCiclo = (_: number, ciclo: any) => this.cicloKey(ciclo);
+  trackByAnio = (_: number, bloque: any) => bloque.anio;
+
 
   ngOnInit(): void {
     this.obtenerAlumnos();
@@ -95,13 +101,22 @@ export class ListarAlumnosComponent implements OnInit {
             return nombreA.localeCompare(nombreB);
           });
 
-        // 🔹 NUEVO: pedir estado de pago corriente para cada alumno
-        this.alumnos.forEach((a) => {
-          this.pagosSrv
-            .estado(a.id, this.mesActual, this.anioActual)
-            .subscribe((est) => (a._pagoMesActual = est));
+        // ✅ Pedir estado de pago de todos juntos
+      const calls = this.alumnos.map(a =>
+        this.pagosSrv.estado(a.id).pipe(
+          catchError(() => of(undefined)) // si falla uno, no rompe todo
+        )
+      );
+
+      // Si no hay alumnos, evitamos forkJoin([])
+      if (!calls.length) return;
+
+      forkJoin(calls).subscribe(estados => {
+        estados.forEach((est, i) => {
+          this.alumnos[i]._pagoMesActual = est;
         });
       });
+    });
   }
 
   abrirPago(a: Alumno) {
@@ -118,10 +133,9 @@ export class ListarAlumnosComponent implements OnInit {
 
   // Confirmar (crear/editar) pago
   confirmarPago(evt: UpsertPago) {
-    this.pagosSrv.confirmar(evt).subscribe({
+    this.pagosSrv.confirmarCiclo(evt).subscribe({
       next: () => {
-        // refrescar estado para pintar el $ en verde
-        this.pagosSrv.estado(evt.userId, this.mesActual, this.anioActual).subscribe(est => {
+        this.pagosSrv.estado(evt.userId).subscribe(est => {
           const idx = this.alumnos.findIndex(x => x.id === evt.userId);
           if (idx >= 0) this.alumnos[idx]._pagoMesActual = est;
           this.cerrarModal();
@@ -131,11 +145,10 @@ export class ListarAlumnosComponent implements OnInit {
   }
 
   // Eliminar pago del mes
-  eliminarPago({ userId, mes, anio }: { userId: number; mes: number; anio: number }) {
-    this.pagosSrv.eliminar(userId, mes, anio).subscribe({
+  eliminarPago({ pagoId, userId }: { pagoId: number; userId: number }) {
+    this.pagosSrv.eliminarPorId(pagoId).subscribe({
       next: () => {
-        // refrescar estado (pasa a pendiente)
-        this.pagosSrv.estado(userId, this.mesActual, this.anioActual).subscribe(est => {
+        this.pagosSrv.estado(userId).subscribe(est => {
           const idx = this.alumnos.findIndex(x => x.id === userId);
           if (idx >= 0) this.alumnos[idx]._pagoMesActual = est;
           this.cerrarModal();
@@ -143,22 +156,32 @@ export class ListarAlumnosComponent implements OnInit {
       }
     });
   }
-  
+
   get alumnosFiltrados() {
+    const fa = (this.filtroApellido ?? '').toLowerCase();
+    const fd = (this.filtroDni ?? '');
+    const ft = (this.filtroTelefono ?? '');
+
     return this.alumnos
-      .filter(alumno =>
-        alumno.apellido.toLowerCase().includes(this.filtroApellido.toLowerCase()) &&
-        alumno.dni.toString().includes(this.filtroDni) &&
-        alumno.telefono.toString().includes(this.filtroTelefono) &&
-        (this.mostrarInactivos || alumno.activo) // 👈 esto es clave
-      )
+      .filter(a => {
+        const apellido = (a.apellido ?? '').toLowerCase();
+        const dni = String(a.dni ?? '');
+        const tel = String(a.telefono ?? '');
+
+        return (
+          apellido.includes(fa) &&
+          dni.includes(fd) &&
+          tel.includes(ft) &&
+          (this.mostrarInactivos || a.activo)
+        );
+      })
       .sort((a, b) => {
-        const apellidoA = a.apellido?.toLowerCase() || '';
-        const apellidoB = b.apellido?.toLowerCase() || '';
+        const apellidoA = (a.apellido ?? '').toLowerCase();
+        const apellidoB = (b.apellido ?? '').toLowerCase();
         if (apellidoA < apellidoB) return -1;
         if (apellidoA > apellidoB) return 1;
-        const nombreA = a.nombre?.toLowerCase() || '';
-        const nombreB = b.nombre?.toLowerCase() || '';
+        const nombreA = (a.nombre ?? '').toLowerCase();
+        const nombreB = (b.nombre ?? '').toLowerCase();
         return nombreA.localeCompare(nombreB);
       });
   }
@@ -196,28 +219,154 @@ export class ListarAlumnosComponent implements OnInit {
     this.router.navigate(['/register'], { queryParams: { admin: true } });
   }
  
+
+  private agruparCiclosPorAnio(ciclos: any[]): Array<{ anio: number; ciclos: any[] }> {
+    const map = new Map<number, any[]>();
+
+    for (const c of ciclos) {
+      const inicio = (c.cicloInicio ?? '').slice(0, 10);
+      const anio = inicio ? Number(inicio.slice(0, 4)) : 0;
+      if (!map.has(anio)) map.set(anio, []);
+      map.get(anio)!.push(c);
+    }
+
+    // ordenar ciclos dentro de cada año por inicio DESC
+    for (const [anio, arr] of map.entries()) {
+      arr.sort((a, b) => (b.cicloInicio ?? '').localeCompare(a.cicloInicio ?? ''));
+    }
+
+    // ordenar años DESC
+    return Array.from(map.entries())
+      .sort((a, b) => b[0] - a[0])
+      .map(([anio, ciclos]) => ({ anio, ciclos }));
+  }
+
+  abrirHistorialCiclos() { this.modalHistorialCiclos = true; }
+  cerrarHistorialCiclos() { this.modalHistorialCiclos = false; }
+
+  private cicloKey(c: any): string {
+    const i = String(c?.cicloInicio ?? '').slice(0,10);
+    const f = String((c?.cicloFin ?? c?.finVentana) ?? '').slice(0,10);
+    return `${i}|${f}`;
+  }
+
+  toggleCiclo(ciclo: any) {
+    const k = this.cicloKey(ciclo);
+    if (this.expandedCiclos.has(k)) this.expandedCiclos.delete(k);
+    else this.expandedCiclos.add(k);
+  }
+
+  isCicloExpandido(ciclo: any): boolean {
+    return this.expandedCiclos.has(this.cicloKey(ciclo));
+  }
+
+  private hoyYMDAR(): string {
+    const ahoraAR = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' })
+    );
+    const y = ahoraAR.getFullYear();
+    const m = String(ahoraAR.getMonth() + 1).padStart(2, '0');
+    const d = String(ahoraAR.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private inicioCiclo(c: any): string {
+    return String(c?.cicloInicio ?? '').slice(0, 10);
+  }
+
+  private finEfectivoCiclo(c: any): string {
+    // si cerró por cantidad, normalmente viene cicloFin (finReal)
+    // si no, finVentana
+    return String((c?.cicloFin || c?.finVentana || '')).slice(0, 10);
+  }
+
+  verAsistencia(userId: number, nombre: string, apellido: string) {
+    this.http.get<any[]>(`${this.api}/reservas/asistencia-ciclos/${userId}`, {
+      params: { _: Date.now().toString() }
+    }).subscribe((ciclos) => {
+
+      const hoy = this.hoyYMDAR();
+
+      const ciclosLimpios = this.quitarCiclosSolapados(ciclos ?? [])
+        .slice()
+        .sort((a, b) => (b.cicloInicio ?? '').localeCompare(a.cicloInicio ?? ''));
+
+      const cicloActual = ciclosLimpios.find(c => {
+        const ini = String(c?.cicloInicio ?? '').slice(0, 10);
+        const fin = String((c?.cicloFin || c?.finVentana || '')).slice(0, 10);
+        return ini && fin && hoy >= ini && hoy <= fin;
+      }) ?? null;
+
+      this.asistenciaCicloActual = cicloActual;
+
+      const anteriores = cicloActual
+        ? ciclosLimpios.filter(c => c !== cicloActual)
+        : ciclosLimpios;
+
+      this.historialPorAnio = this.agruparCiclosPorAnio(anteriores);
+
+      this.asistenciaNombre = nombre;
+      this.asistenciaApellido = apellido;
+      this.modalAsistencia = true;
+    });
+  }
+
+  private quitarCiclosSolapados(ciclos: any[]): any[] {
+    const norm = (c: any) => ({
+      ...c,
+      _ini: String(c?.cicloInicio ?? '').slice(0, 10),
+      _fin: String((c?.cicloFin ?? c?.finVentana) ?? '').slice(0, 10),
+    });
+
+    const arr = (ciclos ?? [])
+      .map(norm)
+      .filter(c => c._ini && c._fin)
+      .sort((a, b) => a._ini.localeCompare(b._ini)); // ASC
+
+    const out: any[] = [];
+    let lastFin = '';
+
+    for (const c of arr) {
+      if (!lastFin) {
+        out.push(c);
+        lastFin = c._fin;
+        continue;
+      }
+
+      // si el nuevo ciclo arranca ANTES o IGUAL al fin del anterior => solapa => lo descartamos
+      if (c._ini <= lastFin) {
+        continue;
+      }
+
+      out.push(c);
+      lastFin = c._fin;
+    }
+
+    // devolver sin campos internos
+    return out.map(({ _ini, _fin, ...rest }) => rest);
+  }
+
   cerrarModalAsistencia() {
     this.modalAsistencia = false;
   }
 
-  verAsistencia(userId: number, nombre: string, apellido: string) {
-    this.http.get<Record<string, any>>(`${this.api}/reservas/asistencia-mensual/${userId}`)
-      .subscribe(data => {
-        console.log('🧾 Asistencia mensual recibida:', data);
-        this.asistenciaData = data;
-        // Orden por año/mes (si lo querés ordenado)
-        this.asistenciaMeses = Object.keys(data).sort((a, b) => {
-          const [ma, ya] = a.split(' de ');
-          const [mb, yb] = b.split(' de ');
-          const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-          const ia = parseInt(ya, 10) * 12 + months.indexOf(ma.toLowerCase());
-          const ib = parseInt(yb, 10) * 12 + months.indexOf(mb.toLowerCase());
-          return ia - ib;
-        });
-        this.asistenciaNombre = nombre;
-        this.asistenciaApellido = apellido;
-        this.modalAsistencia = true;
-      });
+  ordenarFechasAsc(arr: string[] | null | undefined): string[] {
+    if (!arr?.length) return [];
+    // Tus fechas vienen como YYYY-MM-DD, así que ordenar string funciona perfecto
+    return [...arr].sort((a, b) => a.localeCompare(b));
+  }
+
+  formatearFechaAR(ymd: string | null | undefined): string {
+    if (!ymd) return '';
+    const s = String(ymd).slice(0, 10); // por si viniera con hora
+    const [y, m, d] = s.split('-');
+    if (!y || !m || !d) return s;
+    return `${d}/${m}/${y}`; // dd/MM/yyyy
+  }
+
+  get tieneHistorialFinalizado(): boolean {
+    if (!this.historialPorAnio?.length) return false;
+    return this.historialPorAnio.some(b => Array.isArray(b.ciclos) && b.ciclos.length > 0);
   }
 
   onClickReactivar(evt: MouseEvent, alumno: Alumno) {
@@ -255,12 +404,25 @@ export class ListarAlumnosComponent implements OnInit {
   }
 
   verHistorialPagos(a: Alumno){
-    this.pagosSrv.historial(a.id /*, this.anioActual */).subscribe(res => {
+    this.pagosSrv.historial(a.id).subscribe(res => {
       this.historialAlumno = { id: a.id, nombre: a.nombre, apellido: a.apellido };
-      this.historialPagos = res.historial;
+
+      this.historialPagos = (res.historial ?? []).map((p: any) => {
+        const dt = p.fechaPago ? new Date(p.fechaPago) : null;
+
+        const mes = (p.mes != null && p.mes !== '') ? Number(p.mes)
+          : (dt && !isNaN(dt.getTime()) ? dt.getMonth() + 1 : null);
+
+        const anio = (p.anio != null && p.anio !== '') ? Number(p.anio)
+          : (dt && !isNaN(dt.getTime()) ? dt.getFullYear() : null);
+
+        return { ...p, mes, anio };
+      });
+
       this.historialOpen = true;
     });
   }
+
 
   cerrarHistorial(){ this.historialOpen = false; }
 

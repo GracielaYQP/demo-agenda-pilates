@@ -1,7 +1,10 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { HorariosService } from '../services/horarios.service';
 import { CommonModule, NgIf } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '@env/environment';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-mis-turnos',
@@ -10,11 +13,11 @@ import { HttpClient } from '@angular/common/http';
   templateUrl: './mis-turnos.component.html',
   styleUrls:['./mis-turnos.component.css']
 })
-export class MisTurnosComponent {
-
+export class MisTurnosComponent implements OnInit, OnDestroy {
+  
   dias: string[] = [];
   fechaInicioSemana: Date = new Date();
-  horas: string[] = ['08:00', '09:00', '10:00', '11:00', '15:00', '16:00', '17:00', '18:00'];
+  horas: string[] = ['08:00', '09:00', '10:00', '11:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
   misReservas: any[] = [];
   modalAbierto = false;
   turnoAEliminar: any = null;
@@ -25,7 +28,6 @@ export class MisTurnosComponent {
   mostrarConfirmacionUsuario = false;
   esErrorUsuarioCancel = false;
   uiBloqueadoAlumnoCancel = false;      // bloquea todo salvo “Cerrar” luego del éxito
-  modalRecuperacionPendiente = false;
   mostrarModalRecuperacion = false;
   cantidadRecuperaciones = 0;
   ausenciasPorFecha = new Map<string, { fecha: string; tipo: 'dia'|'manana'|'tarde'|'horario'; hora?: string }[]>();
@@ -35,11 +37,27 @@ export class MisTurnosComponent {
   yaMostradoModalRecuperacion = false;
   planMensual: '0' | '4' | '8' | '12' | null = null;
   avisoSemana: { count: number; label: string } | null = null;
+  modalAsistencia: boolean = false;
+  asistenciaNombre: string = '';
+  asistenciaApellido: string = '';
+  asistenciaCiclos: any[] = [];
+  asistenciaCicloActual: any | null = null;
+  modalHistorialCiclos = false;
+  historialPorAnio: Array<{ anio: number; ciclos: any[] }> = [];
+  expandedCiclos = new Set<string>();
+  semanaDesdeYMD = '';
+  semanaHastaYMD = '';
+
+  private api = environment.apiUrl;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private horariosService: HorariosService,
     private http: HttpClient
     ) {}
+
+  trackByCiclo = (_: number, ciclo: any) => this.cicloKey(ciclo);
+  trackByAnio = (_: number, bloque: any) => bloque.anio;
     
   nivelCss(nivel: string) {
     return (nivel || '')
@@ -48,152 +66,166 @@ export class MisTurnosComponent {
       .replace(/\s+/g, '-');
   }
 
-  ngOnInit() {
-    // 1) Traer plan (desde login o backend). Fallback a '4' para no quedar null.
-    this.planMensual = (localStorage.getItem('planMensual') as '0'|'4'|'8'|'12') ?? '4';
-    console.log('[MisTurnos] planMensual =', this.planMensual);
-
-    this.generarDiasConFechas();
-
-    this.horariosService.getHorariosDeLaSemana().subscribe(data => {
-      const fechasYMD = (data.map(h => h.fecha).filter(Boolean) as string[]).sort();
-      if (fechasYMD.length > 0) {
-        const desdeYMD = fechasYMD[0];
-        const hastaYMD = fechasYMD[fechasYMD.length - 1];
-
-        this.horariosService.cargarAusencias(desdeYMD, hastaYMD).subscribe();
-        this.horariosService.ausencias$.subscribe(mapYMD => {
-          const nuevo = new Map<string, { fecha: string; tipo: 'dia'|'manana'|'tarde'|'horario'; hora?: string }[]>();
-          for (const [ymd, lista] of mapYMD.entries()) {
-            const key = this.formatearFechaArg(ymd);
-            nuevo.set(key, (lista || []).map(a => ({ fecha: key, tipo: a.tipo, hora: a.hora })));
-          }
-          this.ausenciasPorFecha = nuevo;
-          // re-pintamos por si las ausencias ocultan algo
-          this.recomputeReservasVisibles();
-        });
-      }
-    });
-
-    this.cargarMisReservas();
-
-    this.horariosService.reservasChanged$.subscribe(() => {
-      this.cargarMisReservas();
-    });
-
-    this.recalcTimer = setInterval(() => this.recalcularRecuperacionesLocal(), 60_000);
-  }
-
-
   ngOnDestroy() {
     if (this.recalcTimer) {
       clearInterval(this.recalcTimer);
     }
+
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  // get avisoSemana(): { count: number; label: string } | null {
-  //   const ahora = new Date();
+  ngOnInit() {
+    this.planMensual = (localStorage.getItem('planMensual') as '0'|'4'|'8'|'12') ?? '4';
+    console.log('[MisTurnos] planMensual =', this.planMensual);
 
-  //   if (this.planMensual === '0') {
-  //     // 👉 “suelta / de prueba” (cuenta solo las sueltas vigentes)
-  //     const countSueltas = (this.misReservas || []).filter(r =>
-  //       r?.tipo === 'suelta' && this.esRecuperacionVigente(r, ahora)
-  //     ).length;
-
-  //     if (countSueltas > 0) {
-  //       return {
-  //         count: countSueltas,
-  //         label: countSueltas > 1 ? 'clases sueltas/de prueba' : 'clase suelta/de prueba'
-  //       };
-  //     }
-  //     return null;
-  //   }
-
-  //   // 👉 “recuperación” (no automáticas vigentes y que NO sean suelta)
-  //   const countRecup = (this.misReservas || []).filter(r =>
-  //     !r?.automatica && r?.tipo !== 'suelta' && this.esRecuperacionVigente(r, ahora)
-  //   ).length;
-
-  //   if (countRecup > 0) {
-  //     return {
-  //       count: countRecup,
-  //       label: countRecup > 1 ? 'clases de recuperación' : 'clase de recuperación'
-  //     };
-  //   }
-  //   return null;
-  // }
-
-  private cargarMisReservas() {
-    this.horariosService.getMisReservas().subscribe({
-      next: (data: any[]) => {
-        this.misReservas = (data || []).filter(r => r.estado !== 'cancelado');
-        console.log('[MisTurnos] misReservas =', this.misReservas);
+    // ✅ ausencias$ (queda)
+    this.horariosService.ausencias$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(mapYMD => {
+        const nuevo = new Map<string, { fecha: string; tipo: 'dia'|'manana'|'tarde'|'horario'; hora?: string }[]>();
+        for (const [ymd, lista] of mapYMD.entries()) {
+          const key = this.formatearFechaArg(ymd);
+          nuevo.set(key, (lista || []).map(a => ({ fecha: key, tipo: a.tipo, hora: a.hora })));
+        }
+        this.ausenciasPorFecha = nuevo;
         this.recomputeReservasVisibles();
+      });
 
-        const ahora = new Date();
+    // ✅ Carga inicial = igual que gestión
+    this.refrescarSemanaComoGestionTurnos();
 
-        // 1) Contar SUELTAS/PRUEBA (siempre priorizan)
-        const countSueltas = (this.misReservas || []).filter(r =>
-          (r?.tipo === 'suelta' || (!r?.automatica && r?.tipo === 'suelta')) && // explícito
-          this.esRecuperacionVigente(r, ahora)
-        ).length;
+    // ✅ Cuando cambia algo, recargar todo igual que gestión
+    this.horariosService.reservasChanged$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.refrescarSemanaComoGestionTurnos());
 
-        // 2) Contar RECUPERACIONES (no automáticas y no sueltas)
-        const countRecup = (this.misReservas || []).filter(r =>
-          !r?.automatica &&
-          r?.tipo !== 'suelta' &&
-          this.esRecuperacionVigente(r, ahora)
-        ).length;
-
-        // 3) Prioridad: si hay sueltas, mostramos sueltas; si no, recuperaciones
-        if (countSueltas > 0) {
-          this.avisoSemana = {
-            count: countSueltas,
-            label: countSueltas > 1 ? 'clases sueltas/de prueba' : 'clase suelta/de prueba'
-          };
-        } else if (countRecup > 0) {
-          this.avisoSemana = {
-            count: countRecup,
-            label: countRecup > 1 ? 'clases de recuperación' : 'clase de recuperación'
-          };
-        } else {
-          this.avisoSemana = null;
-        }
-
-        // (opcional) mantener compat con tu variable existente
-        this.cantidadRecuperaciones = this.avisoSemana?.count ?? 0;
-
-        // Modal inicial
-        if (this.avisoSemana && !this.yaMostradoModalRecuperacion) {
-          this.mostrarModalRecuperacion = true;
-          this.yaMostradoModalRecuperacion = true;
-        } else if (!this.avisoSemana) {
-          this.mostrarModalRecuperacion = false;
-          this.yaMostradoModalRecuperacion = false; // permite reabrir más tarde si vuelven a aparecer
-        }
-      },
-      error: (err) => console.error('❌ Error al cargar mis reservas', err)
-    });
+    // ✅ Timer
+    this.recalcTimer = setInterval(() => this.recalcularRecuperacionesLocal(), 60_000);
   }
 
+  private refrescarSemanaComoGestionTurnos() {
+    this.horariosService.getHorariosDeLaSemana()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(data => {
+        const fechasYMD = (data.map(h => h.fecha).filter(Boolean) as string[]).sort();
+        if (!fechasYMD.length) return;
 
-  generarDiasConFechas() {
+        const desdeYMD = fechasYMD[0];
+        const hastaYMD = fechasYMD[fechasYMD.length - 1];
+
+        // ✅ guardo el rango actual
+        this.semanaDesdeYMD = desdeYMD;
+        this.semanaHastaYMD = hastaYMD;
+
+        this.generarDiasConFechas(new Date(`${desdeYMD}T12:00:00-03:00`));
+
+        this.horariosService.cargarAusencias(desdeYMD, hastaYMD)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe();
+
+        this.cargarMisReservas(desdeYMD, hastaYMD);
+        this.refrescarSaldoRecuperacionDesdeBackend();
+      });
+  }
+
+  private nowAR(): Date {
+    return new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' })
+    );
+  }
+
+  private cargarMisReservas(desdeYMD?: string, hastaYMD?: string) {
+    this.horariosService.getMisReservas()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data: any[]) => {
+
+          // 1) Normalizar
+          const norm = (r: any) => ({
+            ...r,
+            fechaTurno: String(r?.fechaTurno ?? '').slice(0, 10),
+            estado: String(r?.estado ?? '').toLowerCase(),
+            tipo: String(r?.tipo ?? '').toLowerCase(),
+            automatica: (r?.automatica === true) || String(r?.tipo ?? '').toLowerCase() === 'automatica',
+            horario: {
+              ...(r?.horario ?? {}),
+              hora: String(r?.horario?.hora ?? '').slice(0, 5),
+            },
+          });
+
+          let fixed = (data || []).map(norm);
+
+          // 2) Filtrar por la semana visible (Lun..Vie de /horarios/semana)
+          if (desdeYMD && hastaYMD) {
+            fixed = fixed.filter(r => r.fechaTurno >= desdeYMD && r.fechaTurno <= hastaYMD);
+          }
+
+          // 3) Guardar reservas "base" (incluye cancelación momentánea para pintar rojo)
+          //    - cancelación permanente NO se muestra
+          this.misReservas = fixed.filter(r => {
+            if (r.estado !== 'cancelado') return true;
+
+            // mostrar SOLO si es momentánea (rojo)
+            return r?.cancelacionMomentanea === true && r?.cancelacionPermanente !== true;
+          });
+
+          // 4) Recalcular lo visible en la grilla:
+          //    - oculta recuperaciones/sueltas vencidas (+1h)
+          //    - oculta cancelaciones momentáneas vencidas (cuando ya pasó la clase)
+          //    - oculta cierres por ausencias
+          this.recomputeReservasVisibles(this.nowAR());
+
+          // 5) Conteos informativos (NO afectan el saldo real del plan)
+          const ahora = this.nowAR();
+
+          const countSueltasSemana = (this.misReservas || []).filter(r =>
+            r?.tipo === 'suelta' && this.esRecuperacionVigente(r, ahora)
+          ).length;
+
+          // Esto es “cuántas recuperaciones/sueltas PLANEADAS esta semana” (para compat si lo usás)
+          const countRecupPlaneadasSemana = (this.misReservas || []).filter(r =>
+            !r?.automatica && r?.tipo !== 'suelta' && this.esRecuperacionVigente(r, ahora)
+          ).length;
+
+          // Si querés mantener el número “planeadas” (sin mezclar con saldo):
+          this.cantidadRecuperaciones = countRecupPlaneadasSemana;
+
+          // 6) IMPORTANTE:
+          // El aviso “Tenés X recuperaciones disponibles” sale del backend (saldoRecuperacion),
+          // así que NO lo pisamos acá con sueltas.
+          //
+          // Pero si querés mostrar info extra de sueltas en UI (sin tocar avisoSemana),
+          // podés guardar countSueltasSemana en una variable aparte.
+          // Ej: this.cantidadSueltas = countSueltasSemana;
+
+          // 7) El modal/aviso de saldo lo maneja refrescarSaldoRecuperacionDesdeBackend()
+          // (lo llamás en refrescarSemanaComoGestionTurnos, así que acá no hace falta)
+        },
+        error: (err) => console.error('❌ Error al cargar mis reservas', err),
+      });
+  }
+
+  generarDiasConFechas(base?: Date) {
     const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-    const hoy = new Date();
-    const diaActual = hoy.getDay(); // 0 (domingo) a 6 (sábado)
-    const diasDesdeLunes = (diaActual + 6) % 7; // cuántos días retroceder hasta llegar a lunes
-    const lunes = new Date(hoy);
-    lunes.setDate(hoy.getDate() - diasDesdeLunes);
+    const ref = base ? new Date(base) : this.nowAR();
+    const diaActual = ref.getDay();
+    const diasDesdeLunes = (diaActual + 6) % 7;
+
+    const lunes = new Date(ref);
+    lunes.setDate(ref.getDate() - diasDesdeLunes);
+
+    this.fechaInicioSemana = lunes;
 
     this.dias = Array.from({ length: 5 }, (_, i) => {
       const fecha = new Date(lunes);
       fecha.setDate(lunes.getDate() + i);
       const nombreDia = diasSemana[fecha.getDay()];
-      const fechaStr = `${fecha.getDate().toString().padStart(2, '0')}/${(fecha.getMonth() + 1)
-        .toString().padStart(2, '0')}/${fecha.getFullYear()}`;
+      const fechaStr = `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}/${fecha.getFullYear()}`;
       return `${nombreDia} ${fechaStr}`;
     });
+
   }
 
   hasReserva(diaCompleto: string, hora: string): boolean {
@@ -309,10 +341,7 @@ export class MisTurnosComponent {
 
   aceptarCancelacion() {
     const reservaId = this.turnoAEliminar?.id;
-    if (!reservaId) {
-      // ... (manejo de error)
-      return;
-    }
+    if (!reservaId) return;
 
     // En automáticas: momentánea/permanente; en recuperaciones da igual (el back borra)
     const tipo = this.turnoAEliminar.automatica
@@ -329,24 +358,24 @@ export class MisTurnosComponent {
               ? '✅ La reserva fue cancelada por esta vez. Podrás recuperarla.'
               : '✅ La reserva fue cancelada permanentemente.')
           : `✅ La ${etiqueta} fue cancelada.`;
+
         this.esErrorUsuarioCancel = false;
         this.mostrarConfirmacionUsuario = true;
 
-        // 2) Cerrar modales y bloquear la UI
+        // Cerrar modales y bloquear UI
         this.uiBloqueadoAlumnoCancel = true;
         this.mostrarModalConfirmarAccion = false;
         this.modalAbierto = false;
 
-        // 3) ✅ Re-cargar las reservas AHORA, después de que el backend confirme la cancelación
-        this.horariosService.getMisReservas().subscribe(rs => {
-          this.misReservas = rs.filter(x => x.estado !== 'cancelado');
-          this.recomputeReservasVisibles();
-          const recuperaciones = this.misReservas.filter(x => !x.automatica && this.esRecuperacionVigente(x));
-          this.cantidadRecuperaciones = recuperaciones.length;
-        });
+        // ✅ Recargar TODO coherente con la semana visible (igual que Gestión Turnos)
+        this.refrescarSemanaComoGestionTurnos();
       },
       error: (err) => {
-        // ... (manejo de error)
+        this.mensajeUsuarioCancel = err?.error?.message || '❌ No se pudo cancelar la reserva.';
+        this.esErrorUsuarioCancel = true;
+        this.mostrarConfirmacionUsuario = true;
+
+        // (Opcional) no cierres modales si hubo error
       },
     });
   }
@@ -419,7 +448,7 @@ export class MisTurnosComponent {
 
   @HostListener('window:focus')
   onFocus() {
-    this.cargarMisReservas();
+    this.refrescarSemanaComoGestionTurnos();
   }
 
   private esRecuperacionVigente(r: any, ahora = new Date()): boolean {
@@ -476,23 +505,250 @@ export class MisTurnosComponent {
     }
   }
 
+  private recomputeReservasVisibles(now = this.nowAR()) {
+    this.reservasVisibles = (this.misReservas || []).filter((r: any) => {
 
-  private recomputeReservasVisibles(now = new Date()) {
-      this.reservasVisibles = (this.misReservas || []).filter((r: any) => {
-        // fuera por cancelado
-        if (r.estado === 'cancelado') return false;
+      const est = String(r?.estado ?? '').toLowerCase();
 
-        // fuera si el estudio está cerrado por ausencia en ese día/hora
-        if (this.cerradoPorAusencia(r.fechaTurno, r.horario.hora)) return false;
+      // ✅ 1) Si el estudio está cerrado por ausencia en ese día/hora => no se ve
+      if (this.cerradoPorAusencia(r.fechaTurno, r.horario.hora)) return false;
 
-        // si es recuperación (no automática), mostrar solo hasta 1h después del inicio
-        if (!r.automatica) {
-          const inicio = new Date(`${r.fechaTurno}T${r.horario.hora}:00-03:00`);
-          const limite = new Date(inicio.getTime() + 60 * 60 * 1000);
-          if (now >= limite) return false;
+      // construir fecha/hora de la clase (Argentina)
+      const inicio = new Date(`${r.fechaTurno}T${r.horario.hora}:00-03:00`);
+      const limite = new Date(inicio.getTime() + 60 * 60 * 1000); // +1 hora
+
+      // ✅ 2) Canceladas
+      if (est === 'cancelado') {
+        // permanente: nunca se ve en grilla
+        if (r?.cancelacionPermanente === true) return false;
+
+        // momentánea: se ve SOLO hasta +1h del inicio, después desaparece
+        if (r?.cancelacionMomentanea === true) {
+          return now < limite;
         }
-        return true;
-      });
+
+        // otras canceladas sin flags => no se muestran
+        return false;
+      }
+
+      // ✅ 3) Recuperaciones y sueltas (no automáticas) se ven hasta +1h
+      if (r.automatica !== true) {
+        return now < limite;
+      }
+
+      // ✅ 4) Turno fijo normal (automática): se ve siempre dentro de la semana
+      return true;
+    });
+  }
+
+  private getUserIdFromToken(): number | null {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const id = Number(payload.sub ?? payload.userId ?? payload.id);
+      return Number.isFinite(id) && id > 0 ? id : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private hoyYMDAR(): string {
+    const ahoraAR = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' })
+    );
+    const y = ahoraAR.getFullYear();
+    const m = String(ahoraAR.getMonth() + 1).padStart(2, '0');
+    const d = String(ahoraAR.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private cicloKey(c: any): string {
+    const i = String(c?.cicloInicio ?? '').slice(0,10);
+    const f = String((c?.cicloFin ?? c?.finVentana) ?? '').slice(0,10);
+    return `${i}|${f}`;
+  }
+
+  toggleCiclo(ciclo: any) {
+    const k = this.cicloKey(ciclo);
+    if (this.expandedCiclos.has(k)) this.expandedCiclos.delete(k);
+    else this.expandedCiclos.add(k);
+  }
+
+  isCicloExpandido(ciclo: any): boolean {
+    return this.expandedCiclos.has(this.cicloKey(ciclo));
+  }
+
+  abrirHistorialCiclos() { this.modalHistorialCiclos = true; }
+  cerrarHistorialCiclos() { this.modalHistorialCiclos = false; }
+
+  private agruparCiclosPorAnio(ciclos: any[]): Array<{ anio: number; ciclos: any[] }> {
+    const map = new Map<number, any[]>();
+    for (const c of ciclos) {
+      const inicio = (c.cicloInicio ?? '').slice(0, 10);
+      const anio = inicio ? Number(inicio.slice(0, 4)) : 0;
+      if (!map.has(anio)) map.set(anio, []);
+      map.get(anio)!.push(c);
+    }
+    for (const [anio, arr] of map.entries()) {
+      arr.sort((a, b) => (b.cicloInicio ?? '').localeCompare(a.cicloInicio ?? ''));
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[0] - a[0])
+      .map(([anio, ciclos]) => ({ anio, ciclos }));
+  }
+
+  // si querés, podés reutilizar tu quitarCiclosSolapados tal cual la del admin
+  private quitarCiclosSolapados(ciclos: any[]): any[] {
+    const norm = (c: any) => ({
+      ...c,
+      _ini: String(c?.cicloInicio ?? '').slice(0, 10),
+      _fin: String((c?.cicloFin ?? c?.finVentana) ?? '').slice(0, 10),
+    });
+
+    const arr = (ciclos ?? [])
+      .map(norm)
+      .filter(c => c._ini && c._fin)
+      .sort((a, b) => a._ini.localeCompare(b._ini)); // ASC
+
+    const out: any[] = [];
+    let lastFin = '';
+
+    for (const c of arr) {
+      if (!lastFin) { out.push(c); lastFin = c._fin; continue; }
+      if (c._ini <= lastFin) continue; // solapa
+      out.push(c);
+      lastFin = c._fin;
+    }
+
+    return out.map(({ _ini, _fin, ...rest }) => rest);
+  }
+
+  get tieneHistorialFinalizado(): boolean {
+    if (!this.historialPorAnio?.length) return false;
+    return this.historialPorAnio.some(b => Array.isArray(b.ciclos) && b.ciclos.length > 0);
+  }
+
+  verMiAsistencia() {
+    const userId = this.getUserIdFromToken();
+    const nombre = localStorage.getItem('nombreUsuario') || '';
+    const apellido = localStorage.getItem('apellidoUsuario') || '';
+
+    if (!userId) return;
+
+    this.http.get<any[]>(`${this.api}/reservas/asistencia-ciclos/${userId}`, {
+      params: { _: Date.now().toString() }
+    }).subscribe((ciclos) => {
+      const hoy = this.hoyYMDAR();
+
+      const ciclosLimpios = this.quitarCiclosSolapados(ciclos ?? [])
+        .slice()
+        .sort((a, b) => (b.cicloInicio ?? '').localeCompare(a.cicloInicio ?? ''));
+
+      const cicloActual = ciclosLimpios.find(c => {
+        const ini = String(c?.cicloInicio ?? '').slice(0, 10);
+        const fin = String((c?.cicloFin || c?.finVentana || '')).slice(0, 10);
+        return ini && fin && hoy >= ini && hoy <= fin;
+      }) ?? null;
+
+      this.asistenciaCicloActual = cicloActual;
+
+      const anteriores = cicloActual
+        ? ciclosLimpios.filter(c => c !== cicloActual)
+        : ciclosLimpios;
+
+      this.historialPorAnio = this.agruparCiclosPorAnio(anteriores);
+
+      this.asistenciaNombre = nombre;
+      this.asistenciaApellido = apellido;
+      this.modalAsistencia = true;
+    });
+  }
+
+  cerrarModalAsistencia() {
+    this.modalAsistencia = false;
+  }
+
+  // ✅ Ordena fechas YYYY-MM-DD en forma ascendente (de más vieja a más nueva)
+  ordenarFechasAsc(arr: string[] | null | undefined): string[] {
+    if (!arr?.length) return [];
+    return [...arr].sort((a, b) => a.localeCompare(b));
+  }
+
+  // ✅ Formato Argentina dd/MM/yyyy
+  formatearFechaAR(ymd: string | null | undefined): string {
+    if (!ymd) return '';
+    const s = String(ymd).slice(0, 10);
+    const [y, m, d] = s.split('-');
+    if (!y || !m || !d) return s;
+    return `${d}/${m}/${y}`;
+  }
+
+  private refrescarSaldoRecuperacionDesdeBackend() {
+    const userId = this.getUserIdFromToken();
+    if (!userId) return;
+
+    this.http.get<any[]>(`${this.api}/reservas/asistencia-ciclos/${userId}`, {
+      params: { _: Date.now().toString() }
+    }).subscribe({
+      next: (data) => {
+        const ciclos = data ?? [];
+
+        // Si no hay ciclos, limpiamos avisos/modales
+        if (!ciclos.length) {
+          this.avisoSemana = null;
+          this.mostrarModalRecuperacion = false;
+          this.yaMostradoModalRecuperacion = false;
+          return;
+        }
+
+        const hoy = this.hoyYMDAR();
+
+        // Ordenar por cicloInicio DESC (más nuevo primero)
+        const ordenados = [...ciclos].sort((a, b) =>
+          String(b?.cicloInicio ?? '').localeCompare(String(a?.cicloInicio ?? ''))
+        );
+
+        // ✅ Elegir ciclo vigente por FECHA (igual que admin)
+        const cicloVigente = ordenados.find(c => {
+          const ini = String(c?.cicloInicio ?? '').slice(0, 10);
+          const fin = String((c?.cicloFin || c?.finVentana || '')).slice(0, 10);
+          return ini && fin && hoy >= ini && hoy <= fin;
+        }) ?? null;
+
+        // Si no hay ciclo vigente hoy, no mostramos saldo
+        const saldo = Number(cicloVigente?.saldoRecuperacion ?? 0);
+
+        if (saldo > 0) {
+          this.avisoSemana = {
+            count: saldo,
+            label: saldo > 1 ? 'recuperaciones disponibles' : 'recuperación disponible',
+          };
+
+          // Modal inicial (si lo querés mantener)
+          if (!this.yaMostradoModalRecuperacion) {
+            this.mostrarModalRecuperacion = true;
+            this.yaMostradoModalRecuperacion = true;
+          }
+        } else {
+          this.avisoSemana = null;
+          this.mostrarModalRecuperacion = false;
+          this.yaMostradoModalRecuperacion = false;
+        }
+      },
+      error: () => {
+        // si falla el endpoint, no rompas la pantalla
+      },
+    });
+  }
+
+  esCanceladaMomentanea(dia: string, hora: string): boolean {
+    const r = this.getReserva(dia, hora);
+    if (!r) return false;
+    return String(r?.estado ?? '').toLowerCase() === 'cancelado'
+      && r?.cancelacionMomentanea === true
+      && r?.cancelacionPermanente !== true;
   }
 
 }

@@ -1,14 +1,14 @@
-import { Controller, Post, Param, Body, Get, UseGuards, Req, BadRequestException, Patch, Query, ParseDatePipe } from '@nestjs/common';
+import { Controller, Post, Param, Body, Get, UseGuards, Req, BadRequestException, Patch, Query, ParseDatePipe, ParseIntPipe } from '@nestjs/common';
 import { ReservaService } from './reserva.service';
 import { Request } from 'express';
 import { JwtAuthGuard } from 'src/auth/jwt.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { Public } from 'src/auth/public.decorator';
+import { Roles } from 'src/auth/roles.decorator';
 
 @Controller('reservas')
 export class ReservaController {
   constructor(private reservaService: ReservaService) {}
-
 
   @Public()
   @Get('rango')
@@ -32,9 +32,8 @@ export class ReservaController {
     const h = norm(hasta);
 
     if (!ISO.test(d) || !ISO.test(h)) {
-      // En lugar de tirar 400, devolvemos [] y logeamos
       console.warn('[/reservas/rango] fechas inválidas →', { d, h });
-      
+      return []; // ✅
     }
 
     // Si vinieron invertidas, las acomodamos
@@ -43,7 +42,6 @@ export class ReservaController {
 
     return this.reservaService.findByRango(min, max);
   }
-
 
   // 👉 Obtener reservas del usuario autenticado
   @UseGuards(JwtAuthGuard)
@@ -102,15 +100,7 @@ export class ReservaController {
     (body as any).tipo = 'suelta';
     return this.reservar(horarioIdParam, req, body as any);
   }
-
-  // (si querés, este GET puede ser público)
-  @Get(':horarioId')
-  getReservas(@Param('horarioId') horarioIdParam: string) {
-    const horarioId = Number(horarioIdParam);
-    if (isNaN(horarioId)) throw new BadRequestException('ID de horario inválido');
-    return this.reservaService.obtenerReservasPorHorario(horarioId);
-  }
-  
+ 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('anular/:reservaId')
   anularReserva(@Param('reservaId') reservaId: string) {
@@ -126,17 +116,31 @@ export class ReservaController {
     return this.reservaService.editarReserva(Number(reservaId), body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @Post('cancelar')
   cancelarPorFecha(
-    @Req() req: Request,
-    @Body() body: { horarioId: number; fechaTurno: string }
+    @Body() body: { horarioId: number; fechaTurno: string; usuarioId: number }
   ) {
-    const user = req.user as any;
-    const userId = user?.id;
-    if (!userId || isNaN(Number(userId))) throw new BadRequestException('ID de usuario no válido');
-    if (!body.horarioId || !body.fechaTurno) throw new BadRequestException('Faltan datos: horarioId o fecha');
-    return this.reservaService.cancelarPorFecha(body.horarioId, userId, body.fechaTurno);
+    const usuarioId = Number(body.usuarioId);
+    const horarioId = Number(body.horarioId);
+    const fechaTurno = String(body.fechaTurno || '').trim().slice(0, 10);
+
+    if (!Number.isInteger(usuarioId) || usuarioId <= 0) {
+      throw new BadRequestException('usuarioId inválido');
+    }
+    if (!Number.isInteger(horarioId) || horarioId <= 0) {
+      throw new BadRequestException('horarioId inválido');
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaTurno)) {
+      throw new BadRequestException('fechaTurno inválida (YYYY-MM-DD)');
+    }
+
+    // ✅ Admin: solo cancelar a futuro (hoy o más adelante)
+    const hoyYMD = this.reservaService['ymdTodayAR']?.() ?? new Date().toISOString().slice(0, 10);
+    if (fechaTurno < hoyYMD) throw new BadRequestException('No se puede cancelar una clase pasada.');
+
+    return this.reservaService.cancelarPorFecha(horarioId, usuarioId, fechaTurno);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -146,9 +150,9 @@ export class ReservaController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Get('asistencia-mensual/:userId')
-  getAsistenciaMensual(@Param('userId') userId: number) {
-    return this.reservaService.getAsistenciaMensual(userId);
+  @Get('asistencia-ciclos/:userId')
+  getAsistenciaCiclos(@Param('userId', ParseIntPipe) userId: number) {
+    return this.reservaService.getAsistenciaCiclos(userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -156,13 +160,16 @@ export class ReservaController {
   async cancelarReserva(
     @Param('id') idParam: string,
     @Body('tipo') tipo: 'momentanea' | 'permanente',
-    @Req() req: Request
+    @Req() req: any
   ) {
     const id = Number(idParam);
-    if (!id || Number.isNaN(id)) throw new BadRequestException('ID de reserva inválido');
-    if (!tipo || (tipo !== 'momentanea' && tipo !== 'permanente')) {
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BadRequestException('ID de reserva inválido');
+    }
+    if (tipo !== 'momentanea' && tipo !== 'permanente') {
       throw new BadRequestException('Tipo de cancelación inválido');
     }
+
     return this.reservaService.cancelarReservaPorUsuario(id, tipo, req.user);
   }
 
@@ -170,6 +177,13 @@ export class ReservaController {
   @Post('marcar-recuperadas')
   async marcarRecuperadas() {
     return this.reservaService.marcarReservasMomentaneasComoRecuperadas();
+  }
+
+  @Get(':horarioId')
+  getReservas(@Param('horarioId') horarioIdParam: string) {
+    const horarioId = Number(horarioIdParam);
+    if (isNaN(horarioId)) throw new BadRequestException('ID de horario inválido');
+    return this.reservaService.obtenerReservasPorHorario(horarioId);
   }
 }
 

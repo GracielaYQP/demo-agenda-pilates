@@ -1,3 +1,4 @@
+
 import { IsDateString, IsIn, IsOptional, IsString } from 'class-validator';
 import { TipoAusencia } from './ausencia-profe.types';
 

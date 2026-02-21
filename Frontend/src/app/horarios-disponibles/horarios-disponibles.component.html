@@ -18,23 +18,32 @@
             <!-- ✅ Abierto (celda normal) -->
             <ng-container *ngSwitchCase="'ninguno'">
               <!-- Si HAY cupos: celda normal (clickeable si corresponde) -->
-              <ng-container *ngIf="isDisponible(dia, hora, getNivelParaHorario(dia, hora)); else sinCupoTpl">
+              <ng-container *ngIf="tieneAlgoDisponible(dia, hora, getNivelParaHorario(dia, hora)); else sinCupoTpl">
                 <div
                   [ngClass]="[
                     nivelCss(getNivelParaHorario(dia, hora)),
                     isClickable(dia, hora, getNivelParaHorario(dia, hora)) ? 'clickeable' : '',
-                    false ? 'no-disponible' : ''
+                    esSoloFijo(dia, hora, getNivelParaHorario(dia, hora)) ? 'solo-fijo' : ''
                   ]"
                   (click)="isClickable(dia, hora, getNivelParaHorario(dia, hora))
                             ? reservar(dia, hora, getNivelParaHorario(dia, hora))
                             : null"
                 >
                   <span class="nivel">{{ getNivelParaHorario(dia, hora) }}</span>
+
                   <span class="reformers">
-                    Reformers libres: {{ getDisponibles(dia, hora, getNivelParaHorario(dia, hora)) }}
+                    <strong>Reformers libres hoy: {{ getDisponibles(dia, hora, getNivelParaHorario(dia, hora)) }}</strong>
                   </span>
-                  <span *ngIf="getNivelParaHorario(dia, hora) === 'No disponible'">No disponible</span>
+
+                  <span class="reformers">
+                    <strong>Disponibles para turno fijo: {{ getDisponiblesFijo(dia, hora, getNivelParaHorario(dia, hora)) }}</strong>
+                  </span>
+
+                  <span *ngIf="esSoloFijo(dia, hora, getNivelParaHorario(dia, hora))" class="badge-solo-fijo">
+                    Cupo fijo disponible (hoy ocupado)
+                  </span>
                 </div>
+
               </ng-container>
 
               <!-- Si NO hay cupos: bloquear y pintar como feriado/ausencia -->

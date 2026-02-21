@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HorariosService } from '../services/horarios.service';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { HorarioSemana } from '../interfaces/horario-semana.interface';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 type TipoAusencia = 'dia' | 'manana' | 'tarde' | 'horario';
 
@@ -15,13 +17,15 @@ type TipoAusencia = 'dia' | 'manana' | 'tarde' | 'horario';
   templateUrl: './gestion-turnos.component.html',
   styleUrls: ['./gestion-turnos.component.css'],
 })
-export class GestionTurnosComponent implements OnInit {
+export class GestionTurnosComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   usuarioNivel = '';
   dias: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
   horas: string[] = ['08:00','09:00','10:00','11:00','15:00','16:00','17:00','18:00'];
   horarios: any[] = [];
   rolUsuario = '';
-  // tipoReserva: 'automatica' | 'recuperacion' | 'suelta' = 'automatica';
+
   modalAbierto = false;
   turnoSeleccionado: any = null;
 
@@ -66,11 +70,16 @@ export class GestionTurnosComponent implements OnInit {
   mostrarConfirmacionAdmin = false;
   esErrorAdmin = false;
 
-  // ausencias
+  // ✅ alerta turno pasado
+  modalAlertaPasadoAbierto = false;
+  modalAlertaPasadoMsg = '';
+
+  // ausencias (dd/mm/yyyy -> lista)
   ausenciasPorFecha = new Map<string, { fecha: string; tipo: TipoAusencia; hora?: string }[]>();
 
   // índice reservas: (horarioId|fechaYMD) -> ocupadas
   private reservasPorFecha = new Map<string, number>();
+  private reservasFijasPorFecha = new Map<string, number>();
   private key(horarioId: number, fechaYMD: string) { return `${horarioId}|${fechaYMD}`; }
   ocupadasEn(horarioId: number, fechaYMD: string): number {
     return this.reservasPorFecha.get(this.key(horarioId, fechaYMD)) || 0;
@@ -83,11 +92,81 @@ export class GestionTurnosComponent implements OnInit {
     private http: HttpClient
   ) {}
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   nivelCss(nivel: string) {
     return (nivel || '')
       .toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/\s+/g, '-');
+  }
+
+  // ✅ Parser robusto (evita issues de timezone/strings)
+  private parseFechaHoraLocal(fechaYMD: string, horaHHmm: string): Date | null {
+    try {
+      const [y, m, d] = String(fechaYMD || '').slice(0, 10).split('-').map(n => parseInt(n, 10));
+      const [HH, MM] = String(horaHHmm || '').slice(0, 5).split(':').map(n => parseInt(n, 10));
+      if (!y || !m || !d || !Number.isFinite(HH) || !Number.isFinite(MM)) return null;
+      return new Date(y, m - 1, d, HH, MM, 0, 0); // local time
+    } catch {
+      return null;
+    }
+  }
+
+  private minutosHastaTurno(fechaYMD: string, horaHHmm: string): number {
+    const turno = this.parseFechaHoraLocal(fechaYMD, horaHHmm);
+    if (!turno) return -999999;
+    const ahora = new Date();
+    return Math.floor((turno.getTime() - ahora.getTime()) / 60000);
+  }
+
+  private esTurnoPasado(fechaYMD: string, horaHHmm: string): boolean {
+    const diffMin = this.minutosHastaTurno(fechaYMD, horaHHmm);
+    return diffMin < 0; // ya pasó
+  }
+
+  private cerrarTodosLosModales() {
+    this.modalAbierto = false;
+    this.mostrarFormAgregar = false;
+    this.modalConfirmacionFinalAbierta = false;
+
+    this.mostrarModalTipoCancelacion = false;
+    this.mostrarModalConfirmarAccion = false;
+
+    this.modalAlumnoAbierto = false;
+
+    // reseteos
+    this.turnoSeleccionado = null;
+    this.reservaSeleccionada = null;
+
+    this.formMsg = '';
+    this.formIsError = false;
+
+    this.mensajeReserva = '';
+    this.esErrorReserva = false;
+    this.mostrarConfirmacion = false;
+
+    document.body.classList.remove('modal-open');
+  }
+
+  private abrirAlertaPasado(msg: string) {
+    this.cerrarTodosLosModales();
+    this.modalAlertaPasadoMsg = msg;
+    this.modalAlertaPasadoAbierto = true;
+  }
+
+  cerrarAlertaPasado() {
+    this.modalAlertaPasadoAbierto = false;
+    this.modalAlertaPasadoMsg = '';
+    this.refrescarHorarios();
+  }
+
+  formatearFecha(fecha: string): string {
+    const d = new Date(`${fecha}T12:00:00-03:00`);
+    return d.toLocaleDateString('es-AR');
   }
 
   ngOnInit() {
@@ -100,99 +179,111 @@ export class GestionTurnosComponent implements OnInit {
     this.usuarioNivel = nivelGuardado.trim();
     this.rolUsuario = rolGuardado.trim().toLowerCase();
 
-    // 1) SIEMPRE me alimento del stream central:
-    this.horariosService.horarios$.subscribe((data) => {
-      // normalizo ids de reservas (tu lógica tal cual)
-      (data || []).forEach(horario => {
-        if (!horario.idHorario) return;
-        if (Array.isArray(horario.reservas)) {
-          horario.reservas.forEach((r: any) => {
-            if (typeof r.id !== 'number') {
-              if (typeof r.idReserva === 'number') r.id = r.idReserva;
-              else if (typeof r.reservaId === 'number') r.id = r.reservaId;
-            }
-            if (typeof r.id !== 'number') {
-              const nombre = (r.nombre || 'NN').trim();
-              const apellido = (r.apellido || 'SN').trim();
-              r._visualId = `${horario.idHorario}_${nombre}_${apellido}`.replace(/\s/g, '');
+    // ✅ 1) SUBSCRIBE UNA SOLA VEZ a ausencias$ (evita duplicación)
+    this.horariosService.ausencias$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(mapYMD => {
+        const nuevo = new Map<string, { fecha: string; tipo: TipoAusencia; hora?: string }[]>();
+        for (const [ymd, lista] of mapYMD.entries()) {
+          const key = this.formatearFecha(ymd);
+          nuevo.set(key, (lista || []).map(a => ({ fecha: key, tipo: a.tipo, hora: a.hora })));
+        }
+        this.ausenciasPorFecha = nuevo;
+      });
+
+    // ✅ 2) Fuente única: horarios$
+    this.horariosService.horarios$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data) => {
+        // normalizo ids de reservas
+        (data || []).forEach(horario => {
+          if (!horario.idHorario) return;
+          if (Array.isArray(horario.reservas)) {
+            horario.reservas.forEach((r: any) => {
+              if (typeof r.id !== 'number') {
+                if (typeof r.idReserva === 'number') r.id = r.idReserva;
+                else if (typeof r.reservaId === 'number') r.id = r.reservaId;
+              }
+              if (typeof r.id !== 'number') {
+                const nombre = (r.nombre || 'NN').trim();
+                const apellido = (r.apellido || 'SN').trim();
+                r._visualId = `${horario.idHorario}_${nombre}_${apellido}`.replace(/\s/g, '');
+              }
+            });
+          }
+        });
+
+        this.horarios = (data || []).map(h => {
+          const id = Number(h.id ?? h.idHorario ?? (h as any).id_horario);
+          if (!Number.isFinite(id)) console.warn('⚠️ Horario sin ID válido:', h);
+          return { ...h, id, idHorario: id };
+        }) as any[];
+
+        // headers de tabla
+        const diasUnicos = Array.from(new Set(
+          this.horarios.map(h => `${h.dia} ${this.formatearFecha(h.fecha)}`)
+        ));
+        const ordenDias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+        this.dias = ordenDias.map(d => diasUnicos.find(x => x?.startsWith(d))).filter(Boolean) as string[];
+
+        this.horas = Array.from(new Set(this.horarios.map(h => h.hora)))
+          .sort((a, b) => parseInt(a) - parseInt(b));
+
+        // rango visible → pedir ausencias + índice liviano reservas
+        const fechasYMD = (this.horarios.map(h => h.fecha).filter(Boolean) as string[]).sort();
+        if (fechasYMD.length > 0) {
+          const desdeYMD = fechasYMD[0];
+          const hastaYMD = fechasYMD[fechasYMD.length - 1];
+
+          this.horariosService.cargarAusencias(desdeYMD, hastaYMD).subscribe();
+
+          this.horariosService.getReservasDeLaSemana(desdeYMD, hastaYMD).subscribe({
+            next: (rows: any[]) => {
+              this.reservasPorFecha.clear();
+              this.reservasFijasPorFecha.clear();
+
+              for (const r of rows || []) {
+                const estado = String((r as any).estado || '').toLowerCase();
+                const cancelada = (r as any).cancelada === true || estado === 'cancelada' || estado === 'cancelado';
+                if (cancelada) continue;
+
+                const hId   = Number((r as any).horarioId);
+                const fecha = String((r as any).fechaTurno || '').slice(0,10);
+                if (!Number.isFinite(hId) || !fecha) continue;
+
+                const k = this.key(hId, fecha);
+
+                // A) contador “hoy”
+                this.reservasPorFecha.set(k, (this.reservasPorFecha.get(k) || 0) + 1);
+
+                // B) contador “fijas”
+                const tipo = String((r as any).tipo || '').toLowerCase();
+                if (tipo === 'automatica') {
+                  this.reservasFijasPorFecha.set(k, (this.reservasFijasPorFecha.get(k) || 0) + 1);
+                }
+              }
+            },
+            error: () => {
+              this.reservasPorFecha.clear();
+              this.reservasFijasPorFecha.clear();
             }
           });
         }
       });
 
-      this.horarios = (data || []).map(h => {
-        const id = Number(h.id ?? h.idHorario ?? (h as any).id_horario);
-        if (!Number.isFinite(id)) {
-          console.warn('⚠️ Horario sin ID válido:', h);
-        }
-        return {
-          ...h,
-          id,
-          idHorario: id
-        };
-      }) as any[];
+    // ✅ 3) Cuando cambia algo, recargo del back
+    this.horariosService.reservasChanged$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.horariosService.cargarHorarios());
 
-      // headers de tabla
-      const diasUnicos = Array.from(new Set(
-        this.horarios.map(h => `${h.dia} ${this.formatearFecha(h.fecha)}`)
-      ));
-      const ordenDias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
-      this.dias = ordenDias.map(d => diasUnicos.find(x => x?.startsWith(d))).filter(Boolean) as string[];
-
-      this.horas = Array.from(new Set(this.horarios.map(h => h.hora))).sort((a,b) => parseInt(a) - parseInt(b));
-
-      // rango visible → ausencias + índice liviano de reservas (igual que antes)
-      const fechasYMD = (this.horarios.map(h => h.fecha).filter(Boolean) as string[]).sort();
-      if (fechasYMD.length > 0) {
-        const desdeYMD = fechasYMD[0];
-        const hastaYMD = fechasYMD[fechasYMD.length - 1];
-
-        this.horariosService.cargarAusencias(desdeYMD, hastaYMD).subscribe();
-        this.horariosService.ausencias$.subscribe(mapYMD => {
-          const nuevo = new Map<string, { fecha: string; tipo: TipoAusencia; hora?: string }[]>();
-          for (const [ymd, lista] of mapYMD.entries()) {
-            const key = this.formatearFecha(ymd);
-            nuevo.set(key, (lista || []).map(a => ({ fecha: key, tipo: a.tipo, hora: a.hora })));
-          }
-          this.ausenciasPorFecha = nuevo;
-        });
-
-        this.horariosService.getReservasDeLaSemana(desdeYMD, hastaYMD).subscribe({
-          next: (rows: any[]) => {
-            this.reservasPorFecha.clear();
-            for (const r of rows || []) {
-              const cancelada = (r as any).cancelada === true
-                            || String((r as any).estado || '').toUpperCase() === 'CANCELADA';
-              if (cancelada) continue;
-              const hId   = Number((r as any).horarioId);
-              const fecha = String((r as any).fechaTurno);
-              if (!Number.isFinite(hId) || !fecha) continue;
-              const k = this.key(hId, fecha);
-              this.reservasPorFecha.set(k, (this.reservasPorFecha.get(k) || 0) + 1);
-            }
-          },
-          error: () => this.reservasPorFecha.clear()
-        });
-      }
-    });
-
-    // 2) Cuando el service avisa “cambió algo” (reserva/bloqueo), recargo del back:
-    this.horariosService.reservasChanged$.subscribe(() => {
-      this.horariosService.cargarHorarios();
-    });
-
-    // 3) Primera carga:
+    // ✅ Primera carga
     this.horariosService.cargarHorarios();
 
-    // 4) alumnos 
+    // ✅ alumnos
     this.horariosService.obtenerTodosLosAlumnos().subscribe({
       next: (alumnos) => {
-        console.log('📋 Alumnos recibidos:', alumnos);
-
-        // si tenés campo "activo", podés filtrar acá
         this.alumnos = (alumnos || []).filter(a => a.activo !== false);
 
-        // Orden: Apellido, Nombre
         this.alumnosOrdenados = [...this.alumnos].sort((a, b) => {
           const apA = (a.apellido || '').toLowerCase();
           const apB = (b.apellido || '').toLowerCase();
@@ -205,7 +296,6 @@ export class GestionTurnosComponent implements OnInit {
           return 0;
         });
 
-        // lista inicial para el <select>
         this.alumnosFiltrados = this.alumnosOrdenados;
       },
       error: (err) => {
@@ -221,13 +311,11 @@ export class GestionTurnosComponent implements OnInit {
     const total      = Number((turno as any).totalReformers ?? 5);
     const bloqueados = Math.max(0, Number((turno as any).blockedReformers ?? 0));
 
-    // 1) Preferir un número de reservados explícito del back
     const reservadosFromBack = Number((turno as any).reformersReservados ?? NaN);
     if (Number.isFinite(reservadosFromBack)) {
       return Math.max(0, total - reservadosFromBack - bloqueados);
     }
 
-    // 2) Fallback a índice local si no vino "reservados"
     const id       = Number((turno as any).id ?? (turno as any).idHorario);
     const fechaYMD = String((turno as any).fecha || '');
     const ocupadas = this.ocupadasEn(id, fechaYMD);
@@ -238,10 +326,10 @@ export class GestionTurnosComponent implements OnInit {
   private esCerradoFijo(diaConFecha: string, hora: string): boolean {
     const [dia] = diaConFecha.split(' ');
     return (
-      (dia === 'Miércoles' && (hora === '11:00' || hora === '15:00')) ||
+      (dia === 'Miércoles' && (hora === '11:00' || hora === '15:00' || hora === '16:00' || hora === '17:00')) ||
       (dia === 'Viernes'   && (hora === '08:00' || hora === '18:00' || hora === '19:00' || hora === '20:00')) ||
       (dia === 'Martes'    && (hora === '19:00' || hora === '20:00')) ||
-      (dia === 'Jueves'    && (hora === '19:00' || hora === '20:00'))
+      (dia === 'Jueves'    && (hora === '15:00' || hora === '19:00' || hora === '20:00'))
     );
   }
 
@@ -269,15 +357,9 @@ export class GestionTurnosComponent implements OnInit {
     return false;
   }
 
-  formatearFecha(fecha: string): string {
-    const d = new Date(`${fecha}T12:00:00-03:00`);
-    return d.toLocaleDateString('es-AR');
-  }
-
   // ======= UI =======
 
   async abrirTurno(turno: any) {
-    // Normalizar ID
     const turnoId = Number(turno.id ?? turno.idHorario);
     if (!Number.isFinite(turnoId)) {
       console.error('❌ abrirTurno: turno sin ID válido', turno);
@@ -291,18 +373,25 @@ export class GestionTurnosComponent implements OnInit {
       fecha: turno.fecha
     };
 
-    console.log('🧪 abrirTurno()', this.turnoSeleccionado);
+    // ✅ BLOQUEO CLARO: si el turno ya pasó, NO se abre ningún modal (admin ni alumno)
+    if (this.esTurnoPasado(this.turnoSeleccionado.fecha, this.turnoSeleccionado.hora)) {
+      const f = this.formatearFecha(this.turnoSeleccionado.fecha);
+      const h = String(this.turnoSeleccionado.hora || '').slice(0, 5);
+
+      this.abrirAlertaPasado(
+        `Este turno ${f} — ${h} ya pasó. Elegí un horario futuro para reservar.`
+      );
+      return;
+    }
 
     if (this.rolUsuario === 'admin') {
       this.abrirEditorDeReservas(this.turnoSeleccionado);
       return;
     }
 
-    // alumno: 1h antes para recup/suelta
-    const ahora = new Date();
-    const fh = new Date(`${this.turnoSeleccionado.fecha}T${this.turnoSeleccionado.hora}:00-03:00`);
-    const diffH = (fh.getTime() - ahora.getTime()) / 3600000;
-    if (diffH < 1) {
+    // ✅ alumno: 1h antes para recup/suelta (robusto)
+    const diffMin = this.minutosHastaTurno(this.turnoSeleccionado.fecha, this.turnoSeleccionado.hora);
+    if (diffMin < 60) {
       this.uiBloqueadoAlumno = true;
       this.mensajeBloqueoRecuperacion = '⚠️ No podés hacer una reserva de recuperación con menos de 1 hora de anticipación.';
     } else {
@@ -312,9 +401,9 @@ export class GestionTurnosComponent implements OnInit {
 
     this.nombreUsuario = localStorage.getItem('nombreUsuario') || 'Desconocido';
     this.apellidoUsuario = localStorage.getItem('apellidoUsuario') || 'Desconocido';
+    this.tipoReserva = 'recuperacion';
     this.modalAlumnoAbierto = true;
   }
-
 
   abrirEditorDeReservas(turno: any) {
     this.turnoSeleccionado = turno;
@@ -324,20 +413,16 @@ export class GestionTurnosComponent implements OnInit {
   // ======= Admin: agregar =======
 
   abrirFormAgregar() {
-    this.tipoReserva = 'automatica';   
+    this.tipoReserva = 'recuperacion';
     this.mostrarFormAgregar = true;
     this.modalAbierto = false;
     this.formMsg = '';
     this.formIsError = false;
   }
 
- 
   aplicarFiltroAlumnos() {
     const v = (this.filtroAlumno || '').toLowerCase().trim();
-    if (!v) {
-      this.alumnosFiltrados = this.alumnosOrdenados;
-      return;
-    }
+    if (!v) { this.alumnosFiltrados = this.alumnosOrdenados; return; }
     this.alumnosFiltrados = this.alumnosOrdenados.filter(a => {
       const full = `${a.apellido} ${a.nombre}`.toLowerCase();
       const tel  = String(a.telefono || '').toLowerCase();
@@ -354,7 +439,6 @@ export class GestionTurnosComponent implements OnInit {
     this.usuarioSeleccionadoId = null;
     this.telefonoNuevo = '';
 
-    // 👇 limpiar buscador y restaurar lista
     this.filtroAlumno = '';
     this.alumnosFiltrados = this.alumnosOrdenados;
   }
@@ -366,6 +450,18 @@ export class GestionTurnosComponent implements OnInit {
   }
 
   abrirModalConfirmacionFinal() {
+    // ✅ si el turno pasó mientras el modal estaba abierto, avisar y cerrar todo
+    if (this.turnoSeleccionado?.fecha && this.turnoSeleccionado?.hora) {
+      if (this.esTurnoPasado(this.turnoSeleccionado.fecha, this.turnoSeleccionado.hora)) {
+        const f = this.formatearFecha(this.turnoSeleccionado.fecha);
+        const h = String(this.turnoSeleccionado.hora || '').slice(0, 5);
+        this.abrirAlertaPasado(
+          `Este turno ${f} — ${h} ya pasó. Elegí un horario futuro para reservar.`
+        );
+        return;
+      }
+    }
+
     if (this.busquedaModo === 'nombre-apellido' && !this.usuarioSeleccionado) {
       this.formMsg = '⚠️ Seleccioná un alumno de la lista.'; this.formIsError = true; return;
     }
@@ -384,21 +480,23 @@ export class GestionTurnosComponent implements OnInit {
   confirmarReservaFinal() { this.agregarReserva(); }
 
   agregarReserva() {
-      console.log('🧪 agregarReserva()', {
-      turnoSeleccionado: this.turnoSeleccionado,
-      tipoReserva: this.tipoReserva,
-      usuarioSeleccionado: this.usuarioSeleccionado,
-      usuarioSeleccionadoId: this.usuarioSeleccionadoId,
-      busquedaModo: this.busquedaModo
-    });
+    if (this.turnoSeleccionado?.fecha && this.turnoSeleccionado?.hora) {
+      if (this.esTurnoPasado(this.turnoSeleccionado.fecha, this.turnoSeleccionado.hora)) {
+        const f = this.formatearFecha(this.turnoSeleccionado.fecha);
+        const h = String(this.turnoSeleccionado.hora || '').slice(0, 5);
+        this.abrirAlertaPasado(
+          `Este turno ${f} — ${h} ya pasó. Elegí un horario futuro para reservar.`
+        );
+        return;
+      }
+    }
+
     const turnoId = this.turnoSeleccionado?.id;
     if (!turnoId || isNaN(turnoId)) { this.formMsg = '❌ ID de turno inválido'; this.formIsError = true; return; }
 
-    // 1h antes en recup/suelta
+    // ✅ 1h antes en recup/suelta (robusto)
     if (this.tipoReserva !== 'automatica') {
-      const ahora = new Date();
-      const fh = new Date(`${this.turnoSeleccionado.fecha}T${this.turnoSeleccionado.hora}:00-03:00`);
-      const diffMin = (fh.getTime() - ahora.getTime()) / 60000;
+      const diffMin = this.minutosHastaTurno(this.turnoSeleccionado.fecha, this.turnoSeleccionado.hora);
       if (diffMin < 60) { this.formMsg = '⏰ Debe reservarse al menos 1 hora antes.'; this.formIsError = true; return; }
     }
 
@@ -483,6 +581,7 @@ export class GestionTurnosComponent implements OnInit {
   cerrarModalConfirmarAccion() {
     this.mostrarModalConfirmarAccion = false;
     this.modalAbierto = true;
+    this.refrescarHorarios();
   }
 
   ejecutarCancelacion() { this.aceptarCancelacion(); }
@@ -521,11 +620,6 @@ export class GestionTurnosComponent implements OnInit {
     });
   }
 
-  cerrarConfirmacion() {
-    this.mostrarModalConfirmarAccion = false;
-    this.refrescarHorarios();
-  }
-
   // ======= Alumno: confirmar =======
 
   onCambioTipoReserva() {
@@ -542,7 +636,17 @@ export class GestionTurnosComponent implements OnInit {
       return;
     }
 
-    // nivel coincide (alumno)
+    if (this.turnoSeleccionado?.fecha && this.turnoSeleccionado?.hora) {
+      if (this.esTurnoPasado(this.turnoSeleccionado.fecha, this.turnoSeleccionado.hora)) {
+        const f = this.formatearFecha(this.turnoSeleccionado.fecha);
+        const h = String(this.turnoSeleccionado.hora || '').slice(0, 5);
+
+        this.abrirAlertaPasado(
+          `Este turno ${f} — ${h} ya pasó. Elegí un horario futuro para reservar.`
+        );
+        return;
+      }
+    }
     if (this.rolUsuario !== 'admin') {
       const nivelTurno = (this.turnoSeleccionado.nivel || '').toLowerCase().trim();
       const nivelUsuario = (this.usuarioNivel || '').toLowerCase().trim();
@@ -557,20 +661,16 @@ export class GestionTurnosComponent implements OnInit {
 
     const tipo: 'automatica'|'recuperacion'|'suelta' = this.tipoReserva;
 
-    // 1h antes para recup/suelta
+    // ✅ 1h antes para recup/suelta (robusto)
     if (tipo !== 'automatica') {
-      try {
-        const ahora = new Date();
-        const fh = new Date(`${this.turnoSeleccionado.fecha}T${this.turnoSeleccionado.hora}:00-03:00`);
-        const diffMin = (fh.getTime() - ahora.getTime()) / 60000;
-        if (diffMin < 60) {
-          this.mensajeReserva = '⚠️ Las clases de recuperación deben reservarse con al menos una hora de anticipación.';
-          this.esErrorReserva = true;
-          this.mostrarConfirmacion = true;
-          setTimeout(() => { this.mostrarConfirmacion = false; }, 3000);
-          return;
-        }
-      } catch {}
+      const diffMin = this.minutosHastaTurno(this.turnoSeleccionado.fecha, this.turnoSeleccionado.hora);
+      if (diffMin < 60) {
+        this.mensajeReserva = '⚠️ Las clases de recuperación deben reservarse con al menos una hora de anticipación.';
+        this.esErrorReserva = true;
+        this.mostrarConfirmacion = true;
+        setTimeout(() => { this.mostrarConfirmacion = false; }, 3000);
+        return;
+      }
     }
 
     this.horariosService.reservar(
@@ -624,49 +724,87 @@ export class GestionTurnosComponent implements OnInit {
     if (!Number.isFinite(id)) return;
 
     const actual    = Math.max(0, Number(turno.blockedReformers || 0));
-    const propuesta = Math.max(0, actual + delta); // ❗sin cap local
+    const propuesta = Math.max(0, actual + delta);
 
     if (propuesta === actual) return;
 
     this.horariosService.actualizarBloqueo(id, propuesta).subscribe({
       next: () => {
-        // ⚠️ ya no hagas refresco local acá: lo hará el service para TODOS los componentes
+        // nada: el service emite reservasChanged$ o actualiza stream
       },
       error: err => alert('No se pudo actualizar el bloqueo: ' + (err?.error?.message || err.message || err))
     });
   }
 
-
-  // ======= Refresco =======
-
+  // ✅ Refresco: vuelve al stream central
   private refrescarHorarios() {
-    this.horariosService.getHorariosDeLaSemana().subscribe(data => {
-      this.horarios = data.map(h => ({ ...h, id: h.idHorario || h.id })); // ← unificar
-
-      const fechasYMD = [...new Set(data.map(h => h.fecha))].sort();
-      if (fechasYMD.length > 0) {
-        const desde = fechasYMD[0];
-        const hasta = fechasYMD[fechasYMD.length - 1];
-
-        this.horariosService.getReservasDeLaSemana(desde, hasta).subscribe(rows => {
-          this.reservasPorFecha.clear();
-          for (const r of rows) {
-          if ((r as any).cancelada) continue;
-          const k = `${Number((r as any).horarioId)}|${String((r as any).fechaTurno)}`;
-          this.reservasPorFecha.set(k, (this.reservasPorFecha.get(k) || 0) + 1);
-          }
-        });
-      }
-    });
+    this.horariosService.cargarHorarios();
   }
 
-  // Devuelve los turnos que matchean ese "día con fecha" y hora.
-// Respeta cierre fijo/ausencias y filtra por nivel para alumnos.
+  ocupadasFijasEnFecha(turno: any): number {
+    // ✅ prioridad: lo que viene del back
+    const fromBack = Number((turno as any).reformersFijosReservados ?? NaN);
+    if (Number.isFinite(fromBack)) return Math.max(0, fromBack);
+
+    // fallback viejo (por si algún día el back no lo manda)
+    const id = Number(turno?.id ?? turno?.idHorario);
+    const fecha = String(turno?.fecha || '').slice(0,10);
+    return this.reservasFijasPorFecha.get(this.key(id, fecha)) || 0;
+  }
+
+  capacidadTurno(turno: any): number {
+    const total = Number(turno?.totalReformers ?? 5);
+    const bloqueados = Math.max(0, Number(turno?.blockedReformers ?? 0));
+    return Math.max(0, total - bloqueados);
+  }
+
+  disponiblesFijos(turno: any): number {
+    // ✅ prioridad: si el back ya te manda disponibles fijos, usalo directo
+    const fromBackDisp = Number((turno as any).reformersFijosDisponibles ?? NaN);
+    if (Number.isFinite(fromBackDisp)) return Math.max(0, fromBackDisp);
+
+    // si no, calculo con fijos reservados
+    return Math.max(0, this.capacidadTurno(turno) - this.ocupadasFijasEnFecha(turno));
+  }
+
+  disponibleFijoYN(turno: any): 'Y' | 'N' {
+    return this.disponiblesFijos(turno) > 0 ? 'Y' : 'N';
+  }
+
+  private normEstado(v: any): string {
+  return String(v || '').toLowerCase().trim();
+}
+
+  esCancelacionMomentanea(r: any, turno: any): boolean {
+    // ✅ solo si tiene flag momentánea
+    const cm = r?.cancelacionMomentanea === true;
+
+    // ✅ y corresponde a esa fecha de turno (por las dudas)
+    const rFecha = String(r?.fechaTurno || r?.fecha || '').slice(0, 10);
+    const tFecha = String(turno?.fecha || '').slice(0, 10);
+
+    // ✅ muchos backends guardan estado cancelado/cancelada
+    const est = this.normEstado(r?.estado);
+    const esCancel = est === 'cancelado' || est === 'cancelada';
+
+    // ✅ si tu modelo usa cancelacionPermanente, la excluimos
+    const cp = r?.cancelacionPermanente === true;
+
+    return cm && !cp && esCancel && !!tFecha && rFecha === tFecha;
+  }
+
+  esReservaVisibleEnCelda(r: any, turno: any): boolean {
+    const est = this.normEstado(r?.estado);
+    const esReservado = est === 'reservado';
+
+    // visible si está reservado o si es cancelación momentánea
+    return esReservado || this.esCancelacionMomentanea(r, turno);
+  }
+
   getTurnos(diaConFecha: string, hora: string) {
-    // si hay cierre fijo o ausencia, no hay turnos clickeables
     if (this.estadoCierre(diaConFecha, hora) !== 'ninguno') return [];
 
-    const [dia, fechaDDMMYYYY] = diaConFecha.split(' '); // "Lunes 20/11/2025"
+    const [dia, fechaDDMMYYYY] = diaConFecha.split(' ');
     const nivelUsuario = (this.usuarioNivel || '').toLowerCase();
 
     return (this.horarios || []).filter(h =>
@@ -680,7 +818,6 @@ export class GestionTurnosComponent implements OnInit {
     );
   }
 
-  // (Opcional) Saber si hay al menos un turno visible en esa celda
   hasTurno(diaConFecha: string, hora: string): boolean {
     return this.getTurnos(diaConFecha, hora).length > 0;
   }
@@ -690,6 +827,4 @@ export class GestionTurnosComponent implements OnInit {
     this.turnoSeleccionado = null;
     document.body.classList.remove('modal-open');
   }
-
-
 }

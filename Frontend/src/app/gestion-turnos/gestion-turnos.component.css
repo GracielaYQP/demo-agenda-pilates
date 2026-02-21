@@ -1,588 +1,118 @@
-:root{ --app-header-h: 120px; }
-body.modal-open{ overflow: hidden; }
-
+/* ================================
+   CONTENEDOR
+   ================================ */
 .table-container {
-  margin: 40px auto;
-  max-width: 90%;
+  margin: 20px auto;
+  width: 100%;
+  max-width: 1400px;         /* ✅ ancho ideal escritorio */
   background: transparent;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  overflow-x: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 0 10px;
+  overflow-x: hidden;        /* ✅ desktop sin scroll */
 }
 
+/* ================================
+   TÍTULO
+   ================================ */
 h2 {
-  display: inline-block;
   padding: 14px 16px;
   text-transform: uppercase;
   font-size: 1.5rem;
-  font-weight: bold;
-  letter-spacing: 0.5px;
+  font-weight: 800;
+  letter-spacing: .5px;
   text-align: center;
   color: var(--primary);
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
-  background:linear-gradient(#fff,#dbccd1);
+  text-shadow: 2px 2px 4px rgba(0,0,0,.35);
+  background: linear-gradient(to bottom, #fff, #dbccd1);
   border-radius: 6px;
   box-shadow: inset 0 0 0 1px #ddd;
-  display: block;
   width: fit-content;
-  margin: 14px auto 30px auto;
-  border: 2px solid black;
+  margin: 14px auto 22px auto;
+  border: 2px solid #000;
 }
 
+/* ================================
+   TABLA
+   ================================ */
 table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 3px 3px;
+  border-spacing: 4px 8px;   /* ✅ más alto (vertical) sin ensanchar */
   text-align: center;
-  min-width: 700px;
+  min-width: 0;              /* ✅ clave: no fuerza scroll */
+  table-layout: auto;        /* ✅ evita “apretado” feo */
 }
 
+/* ================================
+   ENCABEZADOS
+   ================================ */
 thead {
-  background:linear-gradient(#fff,#dbccd1);
+  background: linear-gradient(to bottom, #fff, #dbccd1);
   color: var(--primary);
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+  text-shadow: 2px 2px 4px rgba(0,0,0,.35);
 }
 
 th {
-  padding: 3px 4px;
+  padding: 4px 6px;
   text-transform: uppercase;
-  font-size: 0.85rem;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-  text-align: center;
-  background:linear-gradient(#fff,#dbccd1);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: .3px;
+  background: linear-gradient(to bottom, #fff, #dbccd1);
   color: var(--primary);
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: inset 0 0 0 1px #ddd;
-  border: 2px solid black;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+  border: 2px solid #000;
 }
 
-td {
-  padding: 2px 3px;  
-}
+/* ================================
+   CELDAS
+   ================================ */
+td { padding: 0; }
 
 td > div {
-  padding: 2px 3px;
-  border-radius: 6px;
-  font-weight: bold;
+  border-radius: 10px;
+  font-weight: 700;
   box-shadow: inset 0 0 0 1px #ddd;
-  border:1px solid #ddd;
+  border: 2px solid #000;
+  box-sizing: border-box;
 }
 
-tbody tr:hover {
-  background-color: #fdf1f6;
-}
-
+/* Columna horario */
 .hora-columna {
-  background:linear-gradient(#fff,#dbccd1);
+  background: linear-gradient(to bottom, #fff, #dbccd1);
   color: var(--primary);
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
-  font-weight: bold;
-  text-align: center;
-  border-radius: 6px;
-  box-shadow: inset 0 0 0 1px #ddd;
-  border: 2px solid black;
+  text-shadow: 2px 2px 4px rgba(0,0,0,.35);
+  font-weight: 800;
+  border-radius: 10px;
+  border: 2px solid #000;
+  padding: 6px 6px;
+  width: 88px;               /* ✅ no se come ancho */
+  white-space: nowrap;
 }
 
-.feriado {
-  background: repeating-linear-gradient(
-    45deg, #eee, #eee 6px, #ddd 6px, #ddd 12px
-  );
-  color: #666;
-  border: 2px dashed #bbb;
-}
-
-.basico {
-  background-color: #d4edda; 
-}
-
-.intermedio {
-  background-color: #fff3cd;
-}
-
-.avanzado {
-  background-color: #f8d7da;
-}
+/* ================================
+   NIVELES / ESTADOS
+   ================================ */
+.basico { background-color: #d4edda; }
+.intermedio { background-color: #fff3cd; }
+.avanzado { background-color: #f8d7da; }
 
 .no-disponible,
 .sin-turno {
   background-color: #e2e3e5;
   color: #6c757d;
-  opacity: 0.6;
+  opacity: 0.7;
   font-style: italic;
-  border-radius: 6px;
-  font-weight: bold;
-  padding: 8px;
+  font-weight: 800;
+  padding: 10px 8px;
 }
 
-.clickeable {
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  padding: 3px;
-  border-radius: 6px;
-  box-shadow: inset 0 0 0 1px #ddd;
-  min-width: auto; 
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.clickeable:hover {
-  transform: scale(1.02);
-  box-shadow: 0 0 4px #aaa;
-}
-
-.nivel {
-  font-weight: bold;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  word-break: normal;
-}
-
-.reformers {
-  font-weight: bold;
-  font-size: 13px;
-  white-space: nowrap;
-  word-break: normal;
-}
-
-.celda-turno {
-  padding: 5px;
-  border-radius: 6px;
-  margin: 0;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  min-width: 90px;
-  min-height: 50px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  box-sizing: border-box;
-  white-space: nowrap;
-  word-break: normal;
-}
-
-.sin-turno {
-  background-color: #e0e0e0;
-  color: #777;
-  font-style: italic;
-  cursor: default;
-}
-
-.bloqueado {
-  background-color: #ffcccc;
-  color: #a00;
-  font-weight: bold;
-  cursor: default;
-}
-
-.celda-turno:hover:not(.sin-turno):not(.bloqueado) {
-  filter: brightness(0.9);
-}
-
-.reservas {
-  margin-top: 6px;
-  font-size: 12px;
-  color:#000;
-  font-weight: bold;
-}
-
-.modal-overlay{
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;               /* ⬅️ centrado vertical */
-  justify-content: center;
-  padding: calc(var(--app-header-h) + 12px) 12px 16px; /* despega del header */
-  background: rgba(0,0,0,.45);
-  z-index: 1000;
-  overflow: auto;
-  touch-action: none;                /* iOS viejo: evita scroll del fondo */
-  -webkit-overflow-scrolling: touch;   
-}
-
-.modal-content{
-  width: min(92vw, 480px);
-  max-height: calc(100dvh - var(--app-header-h) - 32px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  background:#fff; border-radius:12px; padding:24px;
-  box-shadow:0 4px 16px rgba(0,0,0,.2);
-  box-sizing:border-box;
-}
-
-.modal-overlay.is-tall{
-  align-items: flex-start;           
-}
-
-.modal-content.is-tall{
-  width: min(94vw, 500px);         
-  max-height: calc(100dvh - var(--app-header-h) - 32px);
-}
-
-.modal-content h3 {
-  text-align: center;
-  color: var(--primary);
-  font-size: 1.4rem;
-  font-weight: bold;
-  margin-bottom: 16px;
-}
-
-.modal-content p, h4 {
-  color: #333;
-  margin-bottom: 10px;
-  font-weight: bold;
-  text-align: center;
-}
-
-.modal-content input, 
-.modal-content select {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 12px;
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  background-color: #fdf0f5;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  font-weight: bold;
-  color: #333;
-}
-
-.modal-content ul {
-  padding: 0;
-  list-style: none;
-}
-
-.modal-content li {
-  background-color:  #FDF0F5;
-  margin-bottom: 10px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  box-shadow: inset 0 0 0 1px #ddd;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: bold;
-}
-
-.modal-content .btn-anular,
-.modal-content .btn-editar {
-  background-color: var(--primary);
-  border: none;
-  padding: 6px 12px;
-  margin-left: 6px;
-  border-radius: 8px;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.modal-content .btn-anular:hover,
-.modal-content .btn-editar:hover {
-  background-color: var(--primary);
-}
-
-.modal-content .reserva-editando {
-  background-color: #fce4ec;
-  padding: 12px;
-  border-radius: 12px;
-  box-shadow: inset 0 0 0 1px #bbb;
-}
-
-.btn-confirmar,
-.btn-cerrar {
-  width: 100%;
-  padding: 10px;
-  border-radius: 12px;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 12px;
-}
-
-.btn-confirmar {
-  background-color: var(--primary);
-  color: white;
-}
-
-.btn-confirmar:hover {
-  background-color: color-mix(in srgb, var(--primary) 85%, black);
-  color: black;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
-}
-
-.btn-cerrar {
-  background-color: #a8a6a6;
-  color: #333;
-}
-
-.btn-cerrar:hover {
-  background-color: #535353;
-  color: white;
-}
-.btn-agregar-toggle {
-  background-color: #26a69a;
-  color: white;
-  padding: 10px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: bold;
-  width: 100%;
-  margin: 12px 0 6px 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.btn-agregar-toggle:hover {
-  background-color: #00796b;
-}
-
-.btn-cancelar-toggle {
-  background-color: var(--primary);
-  color: white;
-  padding: 10px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: bold;
-  width: 100%;
-  margin: 12px 0 6px 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.btn-cancelar-toggle:hover {
-  background-color: color-mix(in srgb, var(--primary) 85%, black);
-  color: black;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
-}
-
-.btn-cancelar {
-  background-color: var(--primary);
-  color: white;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-top: 12px;
-  width: 100%;
-}
-
-.btn-cancelar:hover {
-  background-color: color-mix(in srgb, var(--primary) 85%, black);
-  color: black;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
-}
-
-.btn-cerrar {
-  background-color: #a8a6a6;
-  color: #333;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 10px;
-}
-
-.modal-confirmacion {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(255, 255, 255);
-  padding: 30px;
-  border-radius: 12px;
-  z-index: 9999;
-  box-shadow: 0 0 20px rgba(0,0,0,0.3);
-  max-width: 90%;
-  width: 400px;
-  text-align: center;
-}
-
-.mensaje-confirmacion {
-  margin-top: 12px;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-weight: 600;
-  text-align: center;
-  box-shadow: 0 0 5px rgba(0,0,0,0.1);
-}
-
-.success {
-  background-color: #e1f3e8;
-  color: #155724;
-}
-
-.error {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-#modal-tipo-cancelacion {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1100;
-}
-
-#modal-tipo-cancelacion .modal-confirm-content {
-  width: 90%;
-  max-width: 360px;
-  background: rgba(255, 255, 255);
-  border-radius: 14px;
-  padding: 26px 24px;
-  text-align: center;
-  background-blend-mode: lighten;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-}
-
-#modal-tipo-cancelacion h3 {
-  color: var(--primary);
-  margin-bottom: 20px;
-  font-size: 1.4rem;
-  font-weight: bold;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-#modal-tipo-cancelacion .botones {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-#modal-tipo-cancelacion .botones button {
-  padding: 10px;
-  border: none;
-  border-radius: 10px;
-  font-weight: bold;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-#modal-tipo-cancelacion .btn-momentanea {
-  background-color: #f3d250;
-  color: #333;
-}
-
-#modal-tipo-cancelacion .btn-momentanea:hover {
-  background-color: #e0b700;
-}
-
-#modal-tipo-cancelacion .btn-permanente {
-  background-color: #ff5252;
-  color: white;
-}
-
-#modal-tipo-cancelacion .btn-permanente:hover {
-  background-color: #d32f2f;
-}
-
-#modal-tipo-cancelacion .btn-cerrar {
-  background-color: #a8a6a6;
-  color: #333;
-  margin-top: 16px;
-}
-
-#modal-tipo-cancelacion .btn-cerrar:hover {
-  background-color: #535353;
-  color: white;
-}
-
-.modal-botones{
-  text-align: center;
-}
-
-.text-danger {
-  color: #c0392b;
-  font-weight: bold;
-  font-size: 14px;
-  margin-top: 10px;
-}
-
-
-.modal-content .mensaje-bloqueo {
-  margin-top: 18px;  
-  margin-bottom: 0;  
-}
-
-.mensaje-bloqueo {
-  color: #d32f2f;
-  font-weight: bold;
-  background-color: #ffe6e6;
-  border: 1px solid #d32f2f;
-  padding: 10px;
-  margin-bottom: 15px;
-  border-radius: 6px;
-  text-align: center;
-}
-
-.mensaje-ok {
-  background-color: #e1f3e8;
-  color: #155724;
-  border: 1px solid #2e7d32;
-  padding: 10px;
-  margin-bottom: 15px;
-  border-radius: 6px;
-  text-align: center;
-  font-weight: 600;
-}
-
-
-/* Celda feriado en 2 líneas, compacta */
-.no-disponible.feriado.feriado-con-tip{
-  display: flex !important;
-  flex-direction: column;    /* 👉 apila en 2 renglones */
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-height: 34px;          /* ajustá a gusto: 32–36px */
-  padding: 4px 2px;
-  text-align: center;
-  overflow: visible;
-  pointer-events: none;      /* no clickeable */
-  cursor: default;
-}
-
-/* Línea 1: “Feriado” */
-.feriado-label{
-  font-style: italic;
-  font-weight: bold;
-  opacity: .85;
-  line-height: 1;
-  font-size: .85rem;
-}
-
-/* Línea 2: badge */
-.badge-recupera{
-  display: inline-block;
-  font-size: .70rem;
-  padding: 2px 2px;
-  border-radius: 999px;
-  background: #f8e5a5;
-  color: #523c01;
-  white-space: nowrap;
-}
-
-/* Por si el <td> recorta contenido */
-.table-container td .feriado-con-tip{
-  width: 100%;
-  box-sizing: border-box;
+.feriado {
+  background: repeating-linear-gradient(45deg, #eee, #eee 6px, #ddd 6px, #ddd 12px);
+  color: #666;
+  border: 2px dashed #bbb;
 }
 
 .cerrado {
@@ -592,231 +122,719 @@ tbody tr:hover {
   pointer-events: none;
   cursor: default;
 }
-.cerrado-label { font-style: italic; font-weight: 700; font-size: .85rem; }
+ 
+/* ================================
+   CELDA CLICKEABLE (contenido)
+   ================================ */
+.clickeable,
+.basico,
+.intermedio,
+.avanzado {
+  padding: 10px 8px;         /* ✅ más alto, sin ensanchar */
+  min-height: 80px;          /* ✅ altura */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
 
-/* Ítems de la lista de reservas dentro de la celda */
-.reserva-item {
+.clickeable:hover {
+  transform: scale(1.01);
+  box-shadow: 0 0 5px rgba(0,0,0,.25);
+}
+
+.nivel {
+  font-weight: 800;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.reformers {
+  font-weight: 800;
+  font-size: 0.95rem;        /* ✅ legible y compacto */
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Reservas (si se muestran en celda) */
+.reservas {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #000;
+  white-space: nowrap;
+}
+/* ==============================
+   RESERVAS EN CELDA (colores)
+   ============================== */
+
+.reserva-item{
   display: inline-block;
   line-height: 1.2;
   margin: 2px 0;
-}
-
-/* Resaltado para recuperaciones */
-.reserva-item.recup {
-  color: #13a85b;
   font-weight: 800;
-  background: whitesmoke;
-  padding: 2px 3px;      
-  border-radius: 8px;      
-  display: inline-block;   
 }
 
-/* Badge “(recup)” compacto */
-.badge-recup {
+/* Recuperación -> verde */
+.reserva-item.recup { 
+  color: #13a85b; 
+  font-weight: 800; 
+  background: whitesmoke; 
+  padding: 2px 3px; 
+  border-radius: 8px; 
+  display: inline-block; 
+} 
+
+/* Suelta -> azul */
+.reserva-item.suelta { 
+  color: #1857a5; 
+  font-weight: 800; 
+  background: whitesmoke;
+  padding: 2px 3px; 
+  border-radius: 8px; 
+  display: inline-block;
+} 
+   
+/* Cancelación momentánea -> rojo (nombre) */
+.reserva-item.cancel-momentanea{ 
+  color: #d93025; 
+  font-weight: 900; 
+  background: #fff0f0; 
+  padding: 2px 3px; 
+  border-radius: 8px; 
+  display: inline-block; 
+} 
+
+/* Badges */
+.badge-recup{
   display: inline-block;
   margin-left: 6px;
-  font-size: 0.9rem;     
-  padding: 2px 6px;       
-  border-radius: 6px;      
-  background: whitesmoke;
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: #f2fff7;
   color: #13a85b;
-  font-weight: 800;
-  vertical-align: middle;  /* alineación más natural con el texto */
+  border: 1px solid rgba(19,168,91,.35);
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-.reserva-item.suelta {
-  color: #a51818;
-  font-weight: 800;
-  background: whitesmoke;
-  padding: 2px 3px;      
-  border-radius: 8px;      
-  display: inline-block;   
-}
-
-.badge-suelta {
+.badge-suelta{
   display: inline-block;
   margin-left: 6px;
-  font-size: 0.9rem;     
-  padding: 2px 6px;       
-  border-radius: 6px;      
-  background: whitesmoke;
-  color: #a51818;
-  font-weight: 800;
-  vertical-align: middle;  /* alineación más natural con el texto */
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: #f2f7ff;
+  color: #1857a5;
+  border: 1px solid rgba(24,87,165,.35);
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-@media (max-width: 768px) {
+.badge-cancel{
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #d93025;
+  border: 1px solid rgba(217,48,37,.35);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+/*MODALES*!
+================================*/
+.modal-overlay{ 
+  position: fixed; 
+  inset: 0; 
+  display: flex; 
+  align-items: center; /* ⬅️ centrado vertical */ 
+  justify-content: center; 
+  padding: calc(var(--app-header-h) + 12px) 12px 16px; /* despega del header */ 
+  background: rgba(0,0,0,.45); z-index: 1000; 
+  overflow: auto; touch-action: none; /* iOS viejo: evita scroll del fondo */ 
+  -webkit-overflow-scrolling: touch; 
+} 
+
+.modal-content{ 
+  width: min(92vw, 480px); 
+  max-height: calc(100dvh - var(--app-header-h) - 32px); 
+  overflow-y: auto; 
+  -webkit-overflow-scrolling: touch; 
+  background:#fff; 
+  border-radius:12px; 
+  padding:24px; 
+  box-shadow:0 4px 16px rgba(0,0,0,.2); 
+  box-sizing:border-box; 
+} 
+
+.modal-overlay.is-tall{ 
+  align-items: flex-start; 
+} 
+
+.modal-content.is-tall{ 
+  width: min(94vw, 500px); 
+  max-height: calc(100dvh - var(--app-header-h) - 32px);
+} 
+ 
+.modal-content h3 { 
+  text-align: center; 
+  color: var(--primary); 
+  font-size: 1.4rem; 
+  font-weight: bold; 
+  margin-bottom: 16px; 
+} 
+
+.modal-content p, h4 { 
+  color: #333; 
+  margin-bottom: 10px; 
+  font-weight: bold; 
+  text-align: center; 
+} 
+
+.modal-content input, .modal-content select { 
+  width: 100%; 
+  padding: 10px; 
+  margin-bottom: 12px; 
+  border: 1px solid #ccc; 
+  border-radius: 12px; 
+  background-color: #fdf0f5; 
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); 
+  font-weight: bold; color: #333; 
+} 
+
+.modal-content ul { 
+  padding: 0; 
+  list-style: none; 
+} 
+
+.modal-content li { 
+  background-color: #FDF0F5; 
+  margin-bottom: 10px; 
+  padding: 8px 12px; 
+  border-radius: 10px; 
+  box-shadow: inset 0 0 0 1px #ddd; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  font-weight: bold; 
+} 
+
+.modal-content .btn-anular, .modal-content .btn-editar { 
+  background-color: var(--primary);
+  border: none; 
+  padding: 6px 12px; 
+  margin-left: 6px; 
+  border-radius: 8px; 
+  color: white; 
+  font-weight: bold; 
+  cursor: pointer; 
+  transition: background-color 0.3s; 
+} 
+
+.modal-content .btn-anular:hover, .modal-content .btn-editar:hover { 
+  background-color: #af1155; 
+} 
+.modal-content .reserva-editando { 
+  background-color: #fce4ec; 
+  padding: 12px; 
+  border-radius: 12px; 
+  box-shadow: inset 0 0 0 1px #bbb; 
+} 
+
+.btn-confirmar, .btn-cerrar { 
+  width: 100%; 
+  padding: 10px; 
+  border-radius: 12px; 
+  border: none; 
+  font-weight: bold; 
+  cursor: pointer; 
+  margin-top: 12px; 
+} 
+
+.btn-confirmar { 
+  background-color: var(--primary); 
+  color: white;
+ } 
+ 
+ .btn-confirmar:hover { 
+  background-color: color-mix(in srgb, var(--primary) 85%, black); 
+  color:#000;
+ } 
+ 
+ .btn-cerrar { 
+  background-color: #a8a6a6; 
+  color: #333; 
+} 
+
+.btn-cerrar:hover { 
+  background-color: #535353; 
+  color: white; 
+} 
+
+.btn-agregar-toggle { 
+  background-color: #26a69a; 
+  color: white; 
+  padding: 10px; 
+  border: none; 
+  border-radius: 12px; 
+  cursor: pointer; 
+  font-weight: bold; 
+  width: 100%; 
+  margin: 12px 0 6px 0; 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); 
+} 
+
+.btn-agregar-toggle:hover { 
+  background-color: #00796b; 
+} 
+
+.btn-cancelar-toggle { 
+  background-color: var(--primary);
+  color: white; 
+  padding: 10px; 
+  border: none; 
+  border-radius: 12px; 
+  cursor: pointer; 
+  font-weight: bold; 
+  width: 100%; 
+  margin: 12px 0 6px 0; 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+ } 
+ 
+ .btn-cancelar-toggle:hover { 
+  background-color: color-mix(in srgb, var(--primary) 85%, black); 
+  color:#000; 
+} 
+
+.btn-cancelar { 
+  background-color: var(--primary); 
+  color: white; 
+  padding: 10px; 
+  border: none; 
+  border-radius: 8px; 
+  cursor: pointer; 
+  font-weight: bold; 
+  margin-top: 12px; 
+  width: 100%;
+ } 
+ 
+ .btn-cancelar:hover { 
+  background-color: color-mix(in srgb, var(--primary) 85%, black); 
+  color:#000; 
+} 
+
+.btn-cerrar { 
+  background-color: #a8a6a6; 
+  color: #333; 
+  padding: 10px; 
+  border: none; 
+  border-radius: 8px; 
+  cursor: pointer; 
+  width: 100%; 
+  margin-top: 10px; 
+} 
+
+.mensaje-confirmacion { 
+  margin-top: 12px; 
+  padding: 10px 16px; 
+  border-radius: 8px; 
+  font-weight: 600; 
+  text-align: center; 
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+ } 
+ 
+ .success { 
+  background-color: #e1f3e8; 
+  color: #155724;
+ } 
+ 
+ .error { 
+  background-color: #f8d7da; 
+  color: #721c24; 
+} 
+
+#modal-tipo-cancelacion { 
+  position: fixed; 
+  top: 0; left: 0; 
+  width: 100%; height: 100%; 
+  background: rgba(0, 0, 0, 0.6); 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  z-index: 1100; 
+} 
+
+#modal-tipo-cancelacion .modal-confirm-content { 
+  width: 90%; 
+  max-width: 360px; 
+  background: rgba(255, 255, 255); 
+  border-radius: 14px; 
+  padding: 26px 24px; 
+  text-align: center; 
+  background-blend-mode: lighten; 
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); 
+} 
+
+#modal-tipo-cancelacion h3 { 
+  color: var(--primary); 
+  margin-bottom: 20px; 
+  font-size: 1.4rem; 
+  font-weight: bold; 
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  #modal-tipo-cancelacion .botones { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px; 
+  } 
+  
+  #modal-tipo-cancelacion .botones button { 
+    padding: 10px; 
+    border: none; 
+    border-radius: 10px; 
+    font-weight: bold; 
+    font-size: 1rem; 
+    cursor: pointer; 
+    transition: background-color 0.3s ease; 
+  } 
+  
+  #modal-tipo-cancelacion .btn-momentanea { 
+    background-color: #f3d250; 
+    color: #333; 
+  } 
+  
+  #modal-tipo-cancelacion .btn-momentanea:hover { 
+    background-color: #e0b700; 
+  } 
+  
+  #modal-tipo-cancelacion .btn-permanente { 
+    background-color: #ff5252; 
+    color: white; 
+  } 
+  
+  #modal-tipo-cancelacion .btn-permanente:hover { 
+    background-color: #d32f2f; 
+  } 
+  
+  #modal-tipo-cancelacion .btn-cerrar { 
+    background-color: #a8a6a6; 
+    color: #333; 
+    margin-top: 16px; 
+  } 
+  
+  #modal-tipo-cancelacion .btn-cerrar:hover { 
+    background-color: #535353; 
+    color: white;
+   } 
+   
+   .modal-botones{ 
+    text-align: center; 
+  } 
+  
+  .text-danger { 
+    color: #c0392b; 
+    font-weight: bold; 
+    font-size: 14px; 
+    margin-top: 10px; 
+  } 
+  
+  .modal-content .mensaje-bloqueo { 
+    margin-top: 18px; 
+    margin-bottom: 0;
+   } 
+   
+   .mensaje-bloqueo { 
+    color: #d32f2f; 
+    font-weight: bold; 
+    background-color: #ffe6e6; 
+    border: 1px solid #d32f2f; 
+    padding: 10px; 
+    margin-bottom: 15px; 
+    border-radius: 6px; 
+    text-align: center; 
+  } 
+  
+  .mensaje-ok { 
+    background-color: #e1f3e8;
+    color: #155724; 
+    border: 1px solid #2e7d32; 
+    padding: 10px;
+     margin-bottom: 15px; 
+     border-radius: 6px; 
+     text-align: center; 
+     font-weight: 600; 
+    
+    }
+  
+@media (max-width: 1023px) {
   .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
     padding: 0 8px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
 
   table {
-    table-layout: auto;
-    word-break: break-word;
-    min-width: 720px;
-    border-spacing: 3px 3px;
+    min-width: 720px;         /* ✅ acá sí: permite grilla grande con scroll */
+    border-spacing: 3px 6px;
   }
 
-  th {
-    font-size: 0.8rem;
-    padding: 5px 6px;
-  }
+  th { font-size: 0.75rem; padding: 4px 5px; }
+  .reformers { font-size: 0.85rem; }
+}
+/* ==============================
+   BADGE: TURNOS FIJOS DISPONIBLES
+   ============================== */
 
-  td {
-    font-size: 0.9rem;
-    padding: 2px;
-  }
-
-  h2 {
-    font-size: 1.1rem;
-    letter-spacing: 0.2px;
-    padding: 8px 10px;
-    text-shadow: none;
-    border-width: 1px;
-    margin: 14px auto 30px auto;
-  }
-
-  .celda-turno { min-width: 80px; }
-
-  /* ✅ Fija la columna de encabezado al tope */
-  thead th {
-    position: sticky;
-    top: 0;
-    z-index: 3;
-    background: linear-gradient(to bottom, #ffffff, #dbccd1); /* Asegura que el fondo sea sólido */
-  }
-
-  /* ✅ Fija la primera columna (Horario) a la izquierda */
-  thead th:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 7;
-    background: linear-gradient(to bottom, #ffffff, #dbccd1); /* Asegura que el fondo sea sólido */
-  }
-
-  .hora-columna {
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    background: linear-gradient(to bottom, #ffffff, #dbccd1); /* Fondo del body fijo */
-  }
-
-  .table-container h2 {
-    position: sticky;
-    top: 0;                 
-    z-index: 1000;           
-    width: fit-content;    
-    margin: 14px auto 30px auto;            
-    border-width: 1px;    
-    text-align: center;     
-    background:linear-gradient(#fff,#dbccd1);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    padding: 10px 8px;
-  }
-
-
-  /* ===== Encabezados: día en 1 línea, fecha en 2ª (sin cortes) ===== */
-  thead th > div {
-    display: block;
-    line-height: 1.15;
-    white-space: nowrap;    /* evita que se parta “Miércoles”, etc. */
-    word-break: normal;
-    -webkit-hyphens: manual;
-    hyphens: manual;        /* desactiva partición automática */
-  }
-
-  /* “Horario” siempre en una sola línea */
-  thead th:first-child,
-  .hora-columna {
-    white-space: nowrap;
-  }
-
-  thead th:not(:first-child) {
-    min-width: 110px;     /* ajustá a gusto: 100–120px suele ir bien */
-  }
-
-    .badge-recup {
-    font-size: 0.65rem;
-    padding: 1px 4px;
-  }
-  .reserva-item.recup {
-    font-weight: 600; /* un poquito más liviano si hace falta */
-  }
+/* Base del renglón reformers (no cambia tu diseño) */
+.clickeable .reformers{
+  width: 100%;
+  text-align: center;
 }
 
-/* ===== Móviles (<= 480px) ===== */
-@media (max-width: 480px) {
-  .table-container {
-    padding: 0 6px;
-    margin: 16px auto;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  h2 {
-    font-size: 1.1rem;
-    letter-spacing: 0.2px;
-    padding: 8px 10px;
-    text-shadow: none;
-    border-width: 1px;
-    margin: 14px auto 30px auto;
-  }
-
-  table {
-    min-width: 640px;
-    table-layout: auto;
-    border-spacing: 2px 2px;
-    font-size: 10px;
-  }
-
-  th {
-    font-size: 0.75rem;
-    padding: 4px 6px;
-  }
-
-  td {
-    font-size: 0.85rem;
-    padding: 2px;
-  }
-
-  .celda-turno { min-width: 76px; }
-
-  /* ✅ Fija la columna de encabezado al tope */
-  thead th {
-    position: sticky;
-    top: 0;
-    z-index: 3;
-    background:linear-gradient(#fff,#dbccd1);
-  }
-
-  /* ✅ Fija la primera columna (Horario) a la izquierda */
-  thead th:first-child{
-    position: sticky;
-    left: 0;
-    z-index: 7;
-    background:linear-gradient(#fff,#dbccd1);
-  }
-
-  .hora-columna {
-    font-size: 10px;
-    padding: 2px;
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    background:linear-gradient(#fff,#dbccd1);
-  }
-
-  thead th:not(:first-child) {
-    min-width: 100px;
-  }
-
-  .badge-recup {
-    font-size: 0.6rem;
-    padding: 1px 3px;
-  }
-  .reserva-item {
-    font-size: 0.75rem;
-  }
+/* ✅ Cuando hay fijos disponibles: resaltar */
+.clickeable .reformers.reformers-fijos{
+  background: #fff !important;
+  border: 2px solid #d93025 !important;   /* rojo */
+  border-radius: 10px !important;
+  padding: 4px 8px !important;
+  margin-top: 6px !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,.08);
 }
+
+@media (max-width: 768px) { 
+  .table-container { 
+    padding: 0 8px; 
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch; 
+  } 
+    
+    table { 
+      table-layout: 
+      auto; word-break: 
+      break-word; 
+      min-width: 720px; 
+      border-spacing: 3px 3px; 
+    } 
+      
+   th { 
+    font-size: 0.8rem; 
+    padding: 5px 6px; 
+  } 
+    
+  td { font-size: 0.9rem; 
+    padding: 2px; 
+  } 
+  
+  h2 { 
+    font-size: 1.1rem; 
+    letter-spacing: 0.2px; 
+    padding: 8px 10px; 
+    text-shadow: none; 
+    border-width: 1px; 
+    margin: 14px auto 30px auto; 
+  } 
+  
+  .celda-turno { 
+    min-width: 80px; 
+  } 
+  
+  thead th { 
+    position: sticky; 
+    top: 0; z-index: 3; 
+    background: linear-gradient(to bottom, #ffffff, #dbccd1); /* Asegura que el fondo sea sólido */ 
+  } /* ✅ Fija la primera columna (Horario) a la izquierda */ 
+  
+  thead th:first-child { 
+    position: sticky; 
+    left: 0; z-index: 7; 
+    background: linear-gradient(to bottom, #ffffff, #dbccd1); /* Asegura que el fondo sea sólido */ 
+  } 
+  
+  .hora-columna { 
+    position: sticky; 
+    left: 0; 
+    z-index: 5; 
+    background: linear-gradient(to bottom, #ffffff, #dbccd1); /* Fondo del body fijo */ 
+  } 
+  
+  .table-container h2 { 
+    position: sticky; 
+    top: 0; 
+    z-index: 1000; 
+    width: fit-content; 
+    margin: 14px auto 30px auto; 
+    border-width: 1px; 
+    text-align: center; 
+    background:linear-gradient(#fff,#dbccd1); 
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1); 
+    padding: 10px 8px; 
+  } /* ===== Encabezados: día en 1 línea, fecha en 2ª (sin cortes) ===== */ 
+    
+   thead th > div { 
+    display: block; 
+    line-height: 1.15; 
+    white-space: nowrap; /* evita que se parta “Miércoles”, etc. */ 
+    word-break: normal; 
+    -webkit-hyphens: manual; 
+    hyphens: manual; /* desactiva partición automática */ 
+  } 
+  
+  thead th:first-child, .hora-columna { 
+    white-space: nowrap; 
+  } 
+  
+  thead th:not(:first-child) { 
+    min-width: 110px; /* ajustá a gusto: 100–120px suele ir bien */ 
+  } 
+  
+  .badge-recup { 
+    font-size: 0.65rem; 
+    padding: 1px 4px; 
+  } 
+  
+  .reserva-item.recup { 
+    font-weight: 600; /* un poquito más liviano si hace falta */ 
+   } 
+}   
+   /* ===== Móviles (<= 480px) ===== */ 
+   
+@media (max-width: 480px) { 
+  .table-container { 
+    padding: 0 6px; 
+    margin: 16px auto; 
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch; 
+  } 
+  
+  h2 { 
+    font-size: 1.1rem; 
+    letter-spacing: 0.2px; 
+    padding: 8px 10px; 
+    text-shadow: none; 
+    border-width: 1px; 
+    margin: 14px auto 30px auto; 
+  } 
+  table { 
+    min-width: 640px; 
+    table-layout: auto; 
+    border-spacing: 2px 2px; 
+    font-size: 10px; 
+  } 
+  
+  th { 
+    font-size: 0.75rem; 
+    padding: 4px 6px; 
+  } 
+  
+  td {
+    font-size: 0.85rem; 
+    padding: 2px; 
+  } 
+  
+  .celda-turno { 
+    min-width: 76px; 
+  } /* ✅ Fija la columna de encabezado al tope */ 
+  
+  thead th { 
+    position: sticky; 
+    top: 0; 
+    z-index: 3; 
+    background:linear-gradient(#fff,#dbccd1); 
+  } /* ✅ Fija la primera columna (Horario) a la izquierda */ 
+  
+  thead th:first-child{ 
+    position: sticky; 
+    left: 0; 
+    z-index: 7; 
+    background:linear-gradient(#fff,#dbccd1); 
+  } 
+  
+  .hora-columna { 
+    font-size: 10px; 
+    padding: 2px; 
+    position: sticky; 
+    left: 0; 
+    z-index: 5; 
+    background:linear-gradient(#fff,#dbccd1); 
+  } 
+  
+  thead th:not(:first-child) { 
+    min-width: 100px; 
+  } 
+  
+  .badge-recup { 
+    font-size: 0.6rem; 
+    padding: 1px 3px; 
+  } 
+  
+  .reserva-item { 
+    font-size: 0.75rem; 
+  } 
+} 
+ 
+/* Celda feriado en 2 líneas, compacta */ 
+.no-disponible.feriado.feriado-con-tip{ 
+  display: flex !important; 
+  flex-direction: column; /* 👉 apila en 2 renglones */ 
+  align-items: center; 
+  justify-content: center; 
+  gap: 4px; 
+  min-height: 34px; /* ajustá a gusto: 32–36px */ 
+  padding: 4px 2px; 
+  text-align: center; 
+  overflow: visible; 
+  pointer-events: none; /* no clickeable */ 
+  cursor: default; 
+} /* Línea 1: “Feriado” */ 
+
+.feriado-label{ 
+  font-style: italic; 
+  font-weight: bold; 
+  opacity: .85; 
+  line-height: 1; 
+  font-size: .85rem; 
+} /* Línea 2: badge */ 
+
+.badge-recupera{ 
+  display: inline-block; 
+  font-size: .70rem; 
+  padding: 2px 2px; 
+  border-radius: 999px; 
+  background: #f8e5a5; 
+  color: #523c01; 
+  white-space: nowrap; 
+} /* Por si el <td> recorta contenido */ 
+
+.table-container td .feriado-con-tip{ 
+  width: 100%; 
+  box-sizing: border-box; 
+} 
+
+.cerrado-label { 
+  font-style: italic; 
+  font-weight: 700; 
+  font-size: .85rem; 
+} /* Ítems de la lista de reservas dentro de la celda */ 
+
+.reserva-item { 
+  display: inline-block; 
+  line-height: 1.2; 
+  margin: 2px 0; 
+} 
+
+
+
+      
+
+
+
+
+

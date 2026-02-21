@@ -2,7 +2,7 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, Column, JoinColumn } from 'typeorm';
 import { Horario } from '../horarios/horarios.entity';
 import { User } from '../users/user.entity'; // si ya tenés un modelo de usuario
-export type TipoReserva = 'automatica' | 'recuperacion' | 'suelta';
+export type TipoReserva = 'automatica' | 'recuperacion' | 'suelta'| 'cerrado';
 @Entity('reservas')
 export class Reserva {
   @PrimaryGeneratedColumn()
@@ -21,7 +21,7 @@ export class Reserva {
   fechaReserva!: string;
 
   @Column({ default: 'reservado' })
-  estado!: 'reservado' | 'cancelado' |'recuperada';
+  estado!: 'reservado' | 'cancelado' |'recuperada'| 'cerrado';
 
   @Column({ default: true })
   automatica!: boolean;
@@ -35,16 +35,18 @@ export class Reserva {
   @Column({ default: false })
   cancelacionPermanente!: boolean;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   fechaCancelacion?: Date;
 
+  @Column({ type: 'boolean', default: false })
+  cierreEstudio!: boolean;
 
   @ManyToOne(() => Horario, horario => horario.reservas, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'horarioId' }) 
+  @JoinColumn({ name: 'horarioId' }) // 👈 asegurate de tener esto
   horario!: Horario;
 
   @ManyToOne(() => User, user => user.reservas, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'usuarioId' })
+  @JoinColumn({ name: 'usuarioId' }) // 👈 esto también
   usuario!: User;
 
 }

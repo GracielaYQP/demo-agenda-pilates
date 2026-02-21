@@ -68,102 +68,189 @@ export class HorariosService {
   }
 
   async getHorariosSemana(userId?: number) {
-  // Genera reservas recurrentes al iniciar la semana (dejamos igual)
-  const lunes = this.lunesBaseParaSistema(new Date());
+    // Genera reservas recurrentes al iniciar la semana (dejamos igual)
+    const lunes = this.lunesBaseParaSistema(new Date());
 
-  // Lunes a viernes de la misma semana
-  const semana: Date[] = [];
-  for (let i = 0; i < 5; i++) semana.push(addDays(lunes, i));
+    // Lunes a viernes de la misma semana
+    const semana: Date[] = [];
+    for (let i = 0; i < 5; i++) semana.push(addDays(lunes, i));
 
-  // Cargamos horarios con sus reservas/usuarios
-  const todosHorarios = await this.horariosRepository.find({
-    relations: ['reservas', 'reservas.usuario'],
-  });
+    // Cargamos horarios con sus reservas/usuarios
+    const todosHorarios = await this.horariosRepository.find({
+      relations: ['reservas', 'reservas.usuario'],
+    });
 
-  type Item = {
-    idHorario: number;
-    dia: string;
-    fecha: string;
-    hora: string;
-    nivel: string;
-    totalReformers: number;
-    reformersReservados: number;
-    reformersDisponibles: number;
-    reservadoPorUsuario: boolean;
-    canceladoPorUsuario: boolean;
-    reservas: any[];
-    blockedReformers: number; // valor global guardado en la entidad
-  };
+    type Item = {
+      idHorario: number;
+      dia: string;
+      fecha: string;
+      hora: string;
+      nivel: string;
 
-  const resultado: Item[] = [];
+      totalReformers: number;
+      reformersReservados: number;
+      reformersDisponibles: number;
 
-  for (const fecha of semana) {
-    const diaNombre = format(fecha, 'EEEE', { locale: es });
-    const diaCapitalizado = diaNombre.charAt(0).toUpperCase() + diaNombre.slice(1);
-    const fechaISO = format(fecha, 'yyyy-MM-dd');
+      // ✅ NUEVOS (para “turno fijo”)
+      reformersFijosReservados: number;
+      reformersFijosDisponibles: number;
 
-    const horariosDelDia = todosHorarios.filter(h => h.dia === diaCapitalizado);
+      reservadoPorUsuario: boolean;
+      canceladoPorUsuario: boolean;
+      reservas: any[];
 
-    for (const horario of horariosDelDia) {
-      // Filtrar reservas de ese día evitando desfase por TZ: compara YYYY-MM-DD "en crudo"
-      const reservasDeEseDia = horario.reservas.filter(r => {
-        if (!r?.fechaTurno) return false;
-        const turnoISO = String(r.fechaTurno).slice(0, 10);
-        return turnoISO === fechaISO;
+      blockedReformers: number; // valor global guardado en la entidad (clamp visual del día)
+    };
+
+    const resultado: Item[] = [];
+
+    for (const fecha of semana) {
+      const diaNombre = format(fecha, 'EEEE', { locale: es });
+      const diaCapitalizado = diaNombre.charAt(0).toUpperCase() + diaNombre.slice(1);
+      const fechaISO = format(fecha, 'yyyy-MM-dd');
+
+      const horariosDelDia = todosHorarios.filter(h => h.dia === diaCapitalizado);
+
+      for (const horario of horariosDelDia) {
+        // Filtrar reservas de ese día evitando desfase por TZ: compara YYYY-MM-DD "en crudo"
+        const reservasDeEseDia = (horario.reservas ?? []).filter(r => {
+          if (!r?.fechaTurno) return false;
+          const turnoISO = String(r.fechaTurno).slice(0, 10);
+          return turnoISO === fechaISO;
+        });
+
+        // Helper local para decidir si una reserva ocupa reformer (TU lógica actual)
+        const cuentaComoReservado = (r: any): boolean => {
+          const estado = String(r?.estado || '').toLowerCase(); // reservado | cancelado | cerrado | ...
+          const cierreEstudio = (r as any)?.cierreEstudio === true;
+
+          if (cierreEstudio) return false;        // cierres no ocupan reformer
+          return estado === 'reservado';          // “libres hoy” = ocupación real del día
+        };
+
+        const cuentaComoFijo = (r: any): boolean => {
+          const tipo = String(r?.tipo || '').toLowerCase();
+          const esAuto = r?.automatica === true || tipo === 'automatica';
+          if (!esAuto) return false;
+
+          const cierreEstudio = (r as any)?.cierreEstudio === true;
+          if (cierreEstudio) return false;               // cierre no es “fijo”
+
+          if (r?.cancelacionPermanente === true) return false; // libera cupo fijo
+
+          // reservado o cancelación momentánea => sigue siendo fijo
+          return true;
+        };
+
+
+        const cantidadReservados = reservasDeEseDia.filter(cuentaComoReservado).length;
+
+        const estaReservadoPorUsuario = !!(userId &&
+          reservasDeEseDia.some(r => r.usuario?.id === userId && cuentaComoReservado(r)));
+
+        const estaCanceladoPorUsuario = !!(userId &&
+          reservasDeEseDia.some(r => r.usuario?.id === userId && (r?.estado || '').toLowerCase() === 'cancelado'));
+
+        const reservasParaUI = (reservasDeEseDia ?? []).filter(r => {
+        const estado = String(r?.estado || '').toLowerCase();
+        const cierreEstudio = (r as any)?.cierreEstudio === true;
+
+        //  mostrar reservadas
+        if (estado === 'reservado') return true;
+
+        // mostrar cancelación MOMENTÁNEA del alumno (NO cierre)
+        if (
+          estado === 'cancelado' &&
+          r?.cancelacionMomentanea === true &&
+          cierreEstudio === false
+        ) return true;
+
+        return false;
+      });
+      // Orden visual de reservas dentro de la celda
+      reservasParaUI.sort((a: any, b: any) => {
+        const prio = (r: any) => {
+          const e = String(r?.estado || '').toLowerCase();
+          const t = String(r?.tipo || '').toLowerCase();
+
+          // cancelaciones al final
+          if (e === 'cancelado') return 90;
+
+          // normales (automáticas)
+          if (t === 'automatica' && e === 'reservado') return 10;
+
+          // recuperaciones
+          if (t === 'recuperacion') return 20;
+
+          // sueltas
+          if (t === 'suelta') return 30;
+
+          return 50;
+        };
+
+        const pA = prio(a);
+        const pB = prio(b);
+        if (pA !== pB) return pA - pB;
+
+        // desempate: apellido, nombre
+        const apA = String(a?.apellido || '').toLowerCase().trim();
+        const apB = String(b?.apellido || '').toLowerCase().trim();
+        if (apA !== apB) return apA.localeCompare(apB);
+
+        const nomA = String(a?.nombre || '').toLowerCase().trim();
+        const nomB = String(b?.nombre || '').toLowerCase().trim();
+        return nomA.localeCompare(nomB);
       });
 
-      // Helper local para decidir si una reserva ocupa reformer
-      const cuentaComoReservado = (r: any): boolean => {
-        const estado = (r?.estado || '').toLowerCase();            // 'reservado' | 'cancelado' | ...
-        const tipo   = (r?.tipo   || '').toLowerCase();            // 'automatica' | 'recuperacion' | 'suelta' | ''
-        const esAuto = r?.automatica === true || tipo === 'automatica';
-        // Cuenta si está 'reservado' o si es automática y no está cancelada
-        return estado === 'reservado' || (esAuto && estado !== 'cancelado');
-      };
 
-      const cantidadReservados = reservasDeEseDia.filter(cuentaComoReservado).length;
 
-      const estaReservadoPorUsuario = !!(userId &&
-        reservasDeEseDia.some(r => r.usuario?.id === userId && cuentaComoReservado(r)));
+        // --- Cálculo de camas (TU lógica actual) ---
+        const total = Number(horario.totalReformers ?? 5);
+        const reservados = Number(cantidadReservados ?? 0);
+        const libresTeoricos = Math.max(0, total - reservados);
 
-      const estaCanceladoPorUsuario = !!(userId &&
-        reservasDeEseDia.some(r => r.usuario?.id === userId && (r?.estado || '').toLowerCase() === 'cancelado'));
+        // bloqueados globales del horario (forzamos a number)
+        const bloqueadosDB = Number(horario.blockedReformers ?? 0);
+        // clamp para no superar los libres del día
+        const bloqueados = Math.min(Math.max(0, bloqueadosDB), libresTeoricos);
 
-      const reservasFiltradas = reservasDeEseDia.filter(cuentaComoReservado);
+        // libres efectivos = total - reservados - bloqueados
+        const reformersDisponibles = Math.max(0, libresTeoricos - bloqueados);
 
-      // --- Cálculo de camas ---
-      const total = Number(horario.totalReformers ?? 5);
-      const reservados = Number(cantidadReservados ?? 0);
-      const libresTeoricos = Math.max(0, total - reservados);
+        // NUEVO: cálculo de “turno fijo”
+        const fijosReservados = reservasDeEseDia.filter(cuentaComoFijo).length;
+        const reformersFijosDisponibles = Math.max(0, total - fijosReservados - bloqueados);
 
-      // bloqueados globales del horario (forzamos a number)
-      const bloqueadosDB = Number(horario.blockedReformers ?? 0);
-      // clamp para no superar los libres del día
-      const bloqueados = Math.min(Math.max(0, bloqueadosDB), libresTeoricos);
+        console.log(
+          `${diaCapitalizado} ${horario.hora} → tot:${total} res:${reservados} blk:${bloqueados} ⇒ libre:${reformersDisponibles} | fijos:${fijosReservados} ⇒ fijoLibre:${reformersFijosDisponibles}`
+        );
 
-      // libres efectivos = total - reservados - bloqueados
-      const reformersDisponibles = Math.max(0, libresTeoricos - bloqueados);
-      console.log(`📊 ${diaCapitalizado} ${horario.hora} → tot:${total} res:${reservados} blk:${bloqueados} ⇒ libre:${reformersDisponibles}`);
+        resultado.push({
+          idHorario: horario.id,
+          dia: diaCapitalizado,
+          fecha: fechaISO,
+          hora: horario.hora,
+          nivel: horario.nivel,
 
-      resultado.push({
-        idHorario: horario.id,
-        dia: diaCapitalizado,
-        fecha: fechaISO,
-        hora: horario.hora,
-        nivel: horario.nivel,
-        totalReformers: total,                 // devolvemos el número ya casteado
-        reformersReservados: reservados,       // conteo del día
-        reformersDisponibles,                  // YA RESTA BLOQUEADOS
-        reservadoPorUsuario: estaReservadoPorUsuario,
-        canceladoPorUsuario: estaCanceladoPorUsuario,
-        reservas: reservasFiltradas,
-        blockedReformers: bloqueados,          // crudo (global del horario, con clamp visual)
-      });
+          totalReformers: total,
+          reformersReservados: reservados,
+          reformersDisponibles,
+
+          reformersFijosReservados: fijosReservados,
+          reformersFijosDisponibles,
+
+          reservadoPorUsuario: estaReservadoPorUsuario,
+          canceladoPorUsuario: estaCanceladoPorUsuario,
+          reservas: reservasParaUI,
+          blockedReformers: bloqueados,
+        });
+      }
     }
+
+    return resultado.map(h => ({ ...h, reservas: h.reservas ?? [] }));
   }
 
-  return resultado.map(h => ({ ...h, reservas: h.reservas ?? [] }));
-}
+
   private lunesBaseParaSistema(now = new Date()): Date {
     const timeZone = 'America/Argentina/Buenos_Aires';
     const hoyBA = toZonedTime(now, timeZone);
@@ -191,7 +278,5 @@ export class HorariosService {
 
     return { ok: true, blockedReformers: nuevo };
   }
-
-
 
 }

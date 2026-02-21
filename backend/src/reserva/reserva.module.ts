@@ -8,9 +8,11 @@ import { User } from '../users/user.entity';
 import { AusenciaProfeModule } from '../feriados/ausencia-profe.module';
 import { Pago } from 'src/pagos/pagos.entity';
 import { WhatsAppModule } from 'src/whatsapp/whatsapp.module';
+import { Notificacion } from 'src/notificaciones/notificacion.entity';
+import { TurnoFijo } from 'src/turnos-fijos/turnos-fijos.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Reserva, Horario, User, Pago]),
+  imports: [TypeOrmModule.forFeature([Reserva, Horario, User, Pago, Notificacion, TurnoFijo]),
            AusenciaProfeModule,
             WhatsAppModule,],
   controllers: [ReservaController],

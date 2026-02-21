@@ -7,6 +7,7 @@ import { ValorPlan, PlanTipo } from '../valor-planes/valor-planes.entity';
 import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { Horario } from 'src/horarios/horarios.entity';
 import { Reserva } from 'src/reserva/reserva.entity';
+import { PagosService } from 'src/pagos/pagos.service';
 
 type ResumenMensualVM = {
   anio: number;
@@ -68,6 +69,7 @@ export class DashboardService {
     @InjectRepository(Reserva) private reservasRepo: Repository<Reserva>,   
     @InjectRepository(Horario) private horariosRepo: Repository<Horario>, 
     private readonly whatsapp: WhatsAppService,
+    private pagosSrv: PagosService,
   ) {}
 
   private labelHorario(h: Partial<Horario>) {
@@ -356,107 +358,100 @@ export class DashboardService {
    * - Saca quienes registraron pago entre el 1 y el 10 (inclusive) del mes/anio
    * - Para el resto, calcula monto por plan (valor_planes) y marca "Atrasado" si el corte ya pasó.
    */
-
   async getDeudoresEntre1y10(anio: number, mes: number): Promise<DeudoresResp> {
-    // 1) Traer alumnos activos NO admin, con plan definido
+    // ✅ YA NO ES "1 al 10". Es "deudores por ciclo vigente (no pagado)".
+
     const alumnosActivos = await this.usersRepo.find({
-      where: {
-        activo: true,
-        rol: Not('admin'),
-      },
+      where: { activo: true, rol: Not('admin') } as any,
       select: ['id', 'nombre', 'apellido', 'telefono', 'email', 'planMensual', 'rol'],
     });
 
-    const alumnosConPlan = alumnosActivos.filter(a => !!a.planMensual);
-
-    // 2) Última fecha de pago GLOBAL por usuario (no se filtra por mes/anio)
-    const ultimosPagos = await this.pagosRepo
-      .createQueryBuilder('p')
-      .select('p.userId', 'userId')
-      .addSelect('MAX(p.fechaPago)', 'ultimaFechaPago')
-      .groupBy('p.userId')
-      .getRawMany<{ userId: number; ultimaFechaPago: string | null }>();
-
-    const ultimaPorUser = new Map<number, string | null>(
-      ultimosPagos.map(r => [r.userId, r.ultimaFechaPago]),
-    );
-
-    // 3) Mapa de precios por plan
     const planes = await this.planesRepo.find();
-    const precioPorPlan = new Map<PlanTipo, number>(
-      planes.map(p => [p.tipo, p.precioARS]),
-    );
+    const precioPorPlan = new Map<PlanTipo, number>(planes.map(p => [p.tipo, p.precioARS]));
 
-    // 4) Fecha actual para evaluar vencimiento (pago + 30 días)
-    const hoy = new Date();
+    // ✅ usar la misma fecha AR que el resto del sistema
+    const hoyYMD = (this.pagosSrv as any).ymdTodayAR
+      ? (this.pagosSrv as any).ymdTodayAR()
+      : new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }))
+          .toISOString()
+          .slice(0, 10);
 
-    // 5) Construcción de deudores: solo planes VENCIDOS
-    const universo = alumnosConPlan.length ? alumnosConPlan : alumnosActivos;
-    const items: DeudorVM[] = [];
+    // --- helper: map con límite de concurrencia ---
+    async function mapLimit<T, R>(
+      arr: T[],
+      limit: number,
+      fn: (item: T, idx: number) => Promise<R>,
+    ): Promise<R[]> {
+      const out: R[] = new Array(arr.length);
+      let i = 0;
 
-    for (const a of universo) {
-      const planTipo = (['4', '8', '12', 'suelta'] as const).includes(a.planMensual as any)
-        ? (a.planMensual as '4' | '8' | '12' | 'suelta')
-        : '4';
-
-      const montoMensual =
-        precioPorPlan.get(planTipo as unknown as PlanTipo) ?? 0;
-
-      const ultima = ultimaPorUser.get(a.id) ?? null;
-
-      let estado: 'En término' | 'Atrasado';
-      let diasAtraso = 0;
-
-      if (!ultima) {
-        // Nunca pagó → lo consideramos plan vencido
-        estado = 'Atrasado';
-        diasAtraso = 0;
-      } else {
-        const fechaPago = new Date(ultima);
-        const fechaVencimiento = new Date(fechaPago.getTime());
-        fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
-
-        if (hoy <= fechaVencimiento) {
-          estado = 'En término';
-          diasAtraso = 0;
-        } else {
-          estado = 'Atrasado';
-          const diffMs = hoy.getTime() - fechaVencimiento.getTime();
-          diasAtraso = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const workers = new Array(Math.min(limit, arr.length)).fill(0).map(async () => {
+        while (true) {
+          const idx = i++;
+          if (idx >= arr.length) break;
+          out[idx] = await fn(arr[idx], idx);
         }
-      }
+      });
 
-      // Solo incluimos en la lista a los que están ATRASADOS (plan vencido)
-      if (estado === 'Atrasado') {
-        items.push({
+      await Promise.all(workers);
+      return out;
+    }
+
+    // ✅ IMPORTANTE: concurrencia moderada (8–15 suele andar perfecto)
+    const results = await mapLimit(alumnosActivos, 10, async (a) => {
+      try {
+        const planTipo = (['4', '8', '12', 'suelta'] as const).includes(a.planMensual as any)
+          ? (a.planMensual as '4' | '8' | '12' | 'suelta')
+          : '4';
+
+        const montoMensual = precioPorPlan.get(planTipo as any) ?? 0;
+
+        const est = await this.pagosSrv.estadoCicloActual(a.id);
+
+        // si no hay ciclo calculable => no lo mostramos en deudores
+        if (!est?.cicloInicio || !est?.cicloFin) return null;
+
+        // ✅ DEUDOR = NO pagó el ciclo vigente (rojo)
+        if (est.isPago) return null;
+
+        // días atraso: si ya pasó el cicloFin, cuenta días; si está dentro del ciclo, 0
+        const fin = new Date(`${est.cicloFin}T00:00:00-03:00`);
+        const hoy = new Date(`${hoyYMD}T00:00:00-03:00`);
+        const diffMs = hoy.getTime() - fin.getTime();
+        const diasAtraso = diffMs > 0 ? Math.floor(diffMs / (1000 * 60 * 60 * 24)) : 0;
+
+        const vm: DeudorVM = {
           userId: a.id,
           alumno: `${a.nombre} ${a.apellido}`.trim(),
           plan: planTipo,
           montoMensual,
-          ultimaFechaPago: ultima,
+          ultimaFechaPago: est.pago?.fechaPago ? new Date(est.pago.fechaPago).toISOString() : null,
           diasAtraso,
-          estado, // 'Atrasado'
+          estado: 'Atrasado',
           contactos: {
-            whatsapp: a.telefono
-              ? `https://wa.me/54${a.telefono.replace(/\D/g, '')}`
-              : null,
+            whatsapp: a.telefono ? `https://wa.me/54${String(a.telefono).replace(/\D/g, '')}` : null,
             telefono: a.telefono ?? null,
             email: a.email ?? null,
           },
-        });
+        };
+
+        return vm;
+      } catch (e) {
+        // ✅ no rompas todo el listado por 1 alumno que falla
+        return null;
       }
-    }
+    });
+
+    const items = results
+      .filter((x): x is DeudorVM => !!x)
+      // opcional: ordenar para que sea prolijo
+      .sort((a, b) => a.alumno.localeCompare(b.alumno, 'es'));
 
     const totalDeudores = items.length;
-    const totalAdeudadoARS = items.reduce(
-      (acc, i) => acc + (i.montoMensual || 0),
-      0,
-    );
+    const totalAdeudadoARS = items.reduce((acc, i) => acc + (i.montoMensual || 0), 0);
 
-    // anio/mes se devuelven igual para no romper el front
     return { anio, mes, totalDeudores, totalAdeudadoARS, items };
   }
-
 
 
   async notificarDeudoresWhatsApp(anio: number, mes: number) {

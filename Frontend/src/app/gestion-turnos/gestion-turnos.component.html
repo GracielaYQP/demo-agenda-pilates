@@ -53,23 +53,34 @@
                 >
                   <div class="nivel">{{ turno.nivel }}</div>
                   <div class="reformers">
-                    Reformers libres: {{  libres(turno) }}
+                    <strong>Reformers libres hoy: {{  libres(turno) }}</strong>
                   </div>
+                  <div
+                    class="reformers"
+                    [ngClass]="{ 'reformers-fijos': disponiblesFijos(turno) > 0 }"
+                  >
+                    <strong>Turnos fijos disponibles: {{ disponiblesFijos(turno) }}</strong>
+                  </div>
+
 
                   <!-- Reservas visibles -->
                   <div class="reservas" *ngIf="turno.reservas?.length > 0">
                     <div *ngFor="let r of turno.reservas">
                       <ng-container
-                        *ngIf="r.estado === 'reservado' && (rolUsuario === 'admin' || turno.nivel.toLowerCase() === usuarioNivel.toLowerCase())"
+                        *ngIf="esReservaVisibleEnCelda(r, turno) && (rolUsuario === 'admin' || turno.nivel.toLowerCase() === usuarioNivel.toLowerCase())"
                       >
                         <span
                           class="reserva-item"
                           [ngClass]="{
                             recup: r.tipo === 'recuperacion',
-                            suelta: r.tipo === 'suelta'
+                            suelta: r.tipo === 'suelta',
+                            'cancel-momentanea': esCancelacionMomentanea(r, turno)
                           }"
                         >
                           {{ r.nombre }} {{ r.apellido }}
+                          <span *ngIf="esCancelacionMomentanea(r, turno)" class="badge-cancel" aria-label="Cancelación momentánea">
+                                (Canceló)
+                          </span>
                           <span *ngIf="r.tipo === 'recuperacion'" class="badge-recup" aria-label="Reserva de recuperación">(Recup)</span>
                           <span *ngIf="r.tipo === 'suelta'" class="badge-suelta" aria-label="Clase suelta">(Suelta)</span>
                         </span>
@@ -194,8 +205,8 @@
     <div class="form-group">
       <label for="tipoReserva"><strong>Tipo de reserva:</strong></label>
       <select id="tipoReserva" [(ngModel)]="tipoReserva">
-        <option [ngValue]="'automatica'">Clase habitual (recurrente)</option>
         <option [ngValue]="'recuperacion'">Recuperación</option>
+        <option [ngValue]="'automatica'">Clase habitual (recurrente)</option>
         <option [ngValue]="'suelta'">Suelta / de prueba</option>
       </select>
     </div>
@@ -231,9 +242,9 @@
     <p>¿Querés cancelar momentáneamente o permanentemente la reserva de
       <strong>{{ reservaSeleccionada?.nombre }} {{ reservaSeleccionada?.apellido }}</strong>?</p>
     <div class="modal-botones">
-      <button class="btn-confirmar" (click)="confirmarCancelacion('momentanea')">Momentánea</button>
-      <button class="btn-confirmar" (click)="confirmarCancelacion('permanente')">Permanente</button>
-      <button class="btn-cerrar" (click)="cerrarModalTipoCancelacion()">Cancelar</button>
+      <button class="btn-confirmar" (click)="confirmarCancelacion('momentanea')">🕒 Solo por esta vez</button>
+      <button class="btn-confirmar" (click)="confirmarCancelacion('permanente')">❌ Cancelar permanentemente</button>
+      <button class="btn-cerrar" (click)="cerrarModalTipoCancelacion()">🚫 Cerrar</button>
     </div>
   </div>
 </div>
@@ -242,10 +253,16 @@
 <div *ngIf="mostrarModalConfirmarAccion" class="modal-overlay">
   <div class="modal-content">
     <h3>Confirmar cancelación</h3>
+      <p *ngIf="tipoCancelacionSeleccionado === 'momentanea'">
+        ¿Querés cancelar la reserva del día <b>{{ turnoSeleccionado?.fecha }}</b>?
+      </p>
+      <p *ngIf="tipoCancelacionSeleccionado === 'permanente'">
+        ¿Querés cancelar permanentemente la reserva de <b>{{ reservaSeleccionada.nombre }} {{ reservaSeleccionada.apellido }}</b>?
+      </p>
     <p>{{ textoConfirmacion }}</p>
     <div class="modal-botones">
-      <button class="btn-confirmar" (click)="ejecutarCancelacion()">✅ Aceptar</button>
-      <button class="btn-cerrar" (click)="cerrarModalConfirmarAccion()">❌ Cancelar</button>
+      <button class="btn-confirmar" (click)="ejecutarCancelacion()">✅ Sí, cancelar</button>
+      <button class="btn-cerrar" (click)="cerrarModalConfirmarAccion()">❌ No</button>
     </div>
   </div>
 </div>
@@ -263,8 +280,8 @@
     <div class="form-group">
       <label for="tipoReserva"><strong>Tipo de reserva:</strong></label>
       <select id="tipoReserva" [(ngModel)]="tipoReserva" (change)="onCambioTipoReserva()" [disabled]="uiBloqueadoAlumno">
-        <option [ngValue]="'automatica'">Clase habitual (recurrente)</option>
         <option [ngValue]="'recuperacion'">Recuperación</option>
+        <option [ngValue]="'automatica'">Clase habitual (recurrente)</option>
         <option [ngValue]="'suelta'">Suelta / de prueba</option>
       </select>
     </div>
@@ -274,7 +291,7 @@
 
     <button class="btn-confirmar"
         (click)="confirmarReserva()"
-        [disabled]="reservaAutomatica === false && mensajeBloqueoRecuperacion">Confirmar</button>
+        [disabled]="tipoReserva !== 'automatica' && mensajeBloqueoRecuperacion">Confirmar</button>
 
     <button class="btn-cerrar" (click)="cerrarModalAlumno()">Cancelar</button>
 
@@ -284,32 +301,22 @@
     </div>
   </div>
 </div>
+<!-- ✅ MODAL ALERTA: TURNO EN EL PASADO -->
+<div *ngIf="modalAlertaPasadoAbierto" class="modal-overlay">
+  <div class="modal-content" style="max-width: 520px;">
+    <h3>⚠️ Turno no válido</h3>
 
-<!--MODAL CONFIRMAR TIPO DE CANCELACIÓN -->
-<div *ngIf="mostrarModalTipoCancelacion" class="modal-confirmacion">
-  <p>¿Querés cancelar la reserva de <b>{{ reservaSeleccionada.nombre }} {{ reservaSeleccionada.apellido }}</b>?</p>
+    <p class="mensaje-bloqueo" style="margin-top: 10px;">
+      {{ modalAlertaPasadoMsg }}
+    </p>
 
-  <div class="modal-botones">
-    <button class="btn-cancelar" (click)="confirmarCancelacion('momentanea')">🕒 Solo por esta vez</button>
-    <button class="btn-cancelar" (click)="confirmarCancelacion('permanente')">❌ Cancelar permanentemente</button>
-    <button class="btn-cerrar" (click)="cerrarModalTipoCancelacion()">🚫 Cerrar</button>
+    <div class="modal-botones">
+      <button class="btn-confirmar" (click)="cerrarAlertaPasado()">OK</button>
+    </div>
   </div>
 </div>
 
-<!-- NUEVO modal de confirmación final -->
-<div *ngIf="mostrarModalConfirmarAccion" class="modal-confirmacion">
-  <p *ngIf="tipoCancelacionSeleccionado === 'momentanea'">
-    ¿Querés cancelar la reserva del día <b>{{ turnoSeleccionado?.fecha }}</b>?
-  </p>
-  <p *ngIf="tipoCancelacionSeleccionado === 'permanente'">
-    ¿Querés cancelar permanentemente la reserva de <b>{{ reservaSeleccionada.nombre }} {{ reservaSeleccionada.apellido }}</b>?
-  </p>
 
-  <div class="modal-botones">
-    <button class="btn-confirmar" (click)="aceptarCancelacion()">✅ Sí, cancelar</button>
-    <button class="btn-cerrar" (click)="cerrarConfirmacion()">❌ No</button>
-  </div>
-</div>
 
 
 

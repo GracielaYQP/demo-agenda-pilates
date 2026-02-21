@@ -1,8 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HorariosService } from '../services/horarios.service';
 import { HorarioSemana } from '../interfaces/horario-semana.interface';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 type TipoAusencia = 'dia' | 'manana' | 'tarde' | 'horario';
 
@@ -13,7 +15,8 @@ type TipoAusencia = 'dia' | 'manana' | 'tarde' | 'horario';
   templateUrl: './horarios-disponibles.component.html',
   styleUrls: ['./horarios-disponibles.component.css']
 })
-export class HorariosDisponiblesComponent {
+export class HorariosDisponiblesComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
   horarios: any[] = [];
   nivelHorarios: any[] = [];
   dias: string[] = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
@@ -59,195 +62,139 @@ export class HorariosDisponiblesComponent {
       .replace(/\s+/g, '-');
   }
 
-  // ngOnInit(): void {
-  //   const cargar = () => {
-  //     this.horariosService.getHorariosDeLaSemana().subscribe({
-  //       next: (data) => {
-  //         this.horarios = (data || [])as HorarioSemana[];
-
-  //         // días con fecha visibles
-  //         const ordenDias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
-  //         const diasUnicos = Array.from(
-  //           new Set(this.horarios.map(h => `${h.dia} ${this.formatearFecha(h.fecha)}`))
-  //         );
-  //         this.dias = ordenDias.map(d => diasUnicos.find(x => x?.startsWith(d))).filter(Boolean) as string[];
-
-  //         // horas
-  //         this.horas = Array.from(new Set(this.horarios.map(h => h.hora))).sort((a,b) => parseInt(a) - parseInt(b));
-
-  //         // por nivel del usuario (si corresponde)
-  //         this.usuarioNivel = localStorage.getItem('nivelUsuario') || '';
-  //         this.nivelHorarios = this.usuarioNivel
-  //           ? this.horarios.filter(h => h.nivel?.toLowerCase() === this.usuarioNivel.toLowerCase())
-  //           : this.horarios;
-
-  //         // rango visible
-  //         const fechasYMD = (this.horarios.map(h => h.fecha).filter(Boolean) as string[]).sort();
-  //         if (fechasYMD.length > 0) {
-  //           const desdeYMD = fechasYMD[0];
-  //           const hastaYMD = fechasYMD[fechasYMD.length - 1];
-
-  //           // ausencias a DD/MM/AAAA
-  //           this.horariosService.cargarAusencias(desdeYMD, hastaYMD).subscribe();
-  //           this.horariosService.ausencias$.subscribe(mapYMD => {
-  //             const nuevo = new Map<string, { fecha: string; tipo: TipoAusencia; hora?: string }[]>();
-  //             for (const [ymd, lista] of mapYMD.entries()) {
-  //               const key = this.formatearFecha(ymd);
-  //               nuevo.set(key, (lista || []).map(a => ({ fecha: key, tipo: a.tipo, hora: a.hora })));
-  //             }
-  //             this.ausenciasPorFecha = nuevo;
-  //           });
-
-  //           // 🟣 RESERVAS de la semana (lo no cancelado)
-  //           this.horariosService.getReservasDeLaSemana(desdeYMD, hastaYMD).subscribe({
-  //             next: rows => {
-  //               this.reservasPorFecha.clear();
-  //               for (const r of rows) {
-  //                 const estado = String((r as any).estado || '').toUpperCase();
-  //                 if (r.cancelada) continue;
-  //                 const hId   = Number((r as any).horarioId);
-  //                 const fecha = String((r as any).fechaTurno); // 'YYYY-MM-DD'
-  //                 if (!Number.isFinite(hId) || !fecha) continue;
-  //                 const k = this.key(hId, fecha);
-  //                 this.reservasPorFecha.set(k, (this.reservasPorFecha.get(k) || 0) + 1);
-  //               }
-            
-  //             },
-  //             error: () => this.reservasPorFecha.clear()
-  //           });
-  //         }
-
-  //         this.mostrarMensajeTemporal();
-  //       },
-  //       error: () => {
-  //         this.horarios = [];
-  //         this.dias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
-  //         this.horas = ['08:00','09:00','10:00','11:00','15:00','16:00','17:00','18:00'];
-  //       }
-  //     });
-  //   };
-  //   cargar();
-  //   this.horariosService.reservasChanged$.subscribe(() => cargar());
-  // }
-
+    ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   // === Cálculos unificados ===
 
-ngOnInit(): void {
-  // 1) Escucho SIEMPRE el stream del service
-  this.horariosService.horarios$.subscribe((data) => {
-    const horarios = (data || []) as HorarioSemana[];
+  ngOnInit(): void {
 
-    this.horarios = horarios;
-
-    // días con fecha visibles (orden L→V)
-    const ordenDias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
-    const diasUnicos = Array.from(
-      new Set(horarios.map(h => `${h.dia} ${this.formatearFecha(h.fecha)}`))
-    );
-    this.dias = ordenDias
-      .map(d => diasUnicos.find(x => x?.startsWith(d)))
-      .filter(Boolean) as string[];
-
-    // horas
-    this.horas = Array.from(new Set(horarios.map(h => h.hora)))
-      .sort((a,b) => parseInt(a) - parseInt(b));
-
-    // por nivel del usuario (si corresponde)
-    this.usuarioNivel = localStorage.getItem('nivelUsuario') || '';
-    this.nivelHorarios = this.usuarioNivel
-      ? horarios.filter(h => h.nivel?.toLowerCase() === this.usuarioNivel.toLowerCase())
-      : horarios;
-
-    // rango visible para ausencias + reservas índice
-    const fechasYMD = (horarios.map(h => h.fecha).filter(Boolean) as string[]).sort();
-    if (fechasYMD.length > 0) {
-      const desdeYMD = fechasYMD[0];
-      const hastaYMD = fechasYMD[fechasYMD.length - 1];
-
-      // AUSENCIAS → a DD/MM/AAAA (una sola suscripción viva)
-      this.horariosService.cargarAusencias(desdeYMD, hastaYMD).subscribe();
-      this.horariosService.ausencias$.subscribe(mapYMD => {
+    // ✅ 0) ausencias$: UNA sola suscripción viva (no adentro de horarios$)
+    this.horariosService.ausencias$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(mapYMD => {
         const nuevo = new Map<string, { fecha: string; tipo: TipoAusencia; hora?: string }[]>();
         for (const [ymd, lista] of mapYMD.entries()) {
-          const key = this.formatearFecha(ymd);
+          const key = this.formatearFecha(ymd); // dd/MM/yyyy
           nuevo.set(key, (lista || []).map(a => ({ fecha: key, tipo: a.tipo, hora: a.hora })));
         }
         this.ausenciasPorFecha = nuevo;
       });
 
-      // ÍNDICE simple de reservas no canceladas (fallback/controles)
-      this.horariosService.getReservasDeLaSemana(desdeYMD, hastaYMD).subscribe({
-        next: rows => {
+    // ✅ 1) Escucho SIEMPRE el stream del service (con takeUntil)
+    this.horariosService.horarios$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data) => {
+        const horarios = (data || []) as HorarioSemana[];
+
+        this.horarios = horarios;
+
+        // días con fecha visibles (orden L→V)
+        const ordenDias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+        const diasUnicos = Array.from(
+          new Set(horarios.map(h => `${h.dia} ${this.formatearFecha(h.fecha)}`))
+        );
+        this.dias = ordenDias
+          .map(d => diasUnicos.find(x => x?.startsWith(d)))
+          .filter(Boolean) as string[];
+
+        // horas
+        this.horas = Array.from(new Set(horarios.map(h => h.hora)))
+          .sort((a,b) => parseInt(a) - parseInt(b));
+
+        // por nivel del usuario (si corresponde)
+        this.usuarioNivel = localStorage.getItem('nivelUsuario') || '';
+        this.nivelHorarios = this.usuarioNivel
+          ? horarios.filter(h => (h.nivel || '').toLowerCase() === this.usuarioNivel.toLowerCase())
+          : horarios;
+
+        // rango visible para ausencias + reservas índice
+        const fechasYMD = (horarios.map(h => h.fecha).filter(Boolean) as string[]).sort();
+        if (fechasYMD.length > 0) {
+          const desdeYMD = fechasYMD[0];
+          const hastaYMD = fechasYMD[fechasYMD.length - 1];
+
+          // ✅ Trigger de carga (no suscripción extra a ausencias$ acá)
+          this.horariosService.cargarAusencias(desdeYMD, hastaYMD)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe();
+
+          // ÍNDICE simple de reservas no canceladas (fallback/controles)
+          this.horariosService.getReservasDeLaSemana(desdeYMD, hastaYMD)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: rows => {
+                this.reservasPorFecha.clear();
+                for (const r of rows) {
+                  if ((r as any).cancelada) continue;
+                  const hId   = Number((r as any).horarioId);
+                  const fecha = String((r as any).fechaTurno || '').slice(0,10);
+                  if (!Number.isFinite(hId) || !fecha) continue;
+                  const k = this.key(hId, fecha);
+                  this.reservasPorFecha.set(k, (this.reservasPorFecha.get(k) || 0) + 1);
+                }
+              },
+              error: () => this.reservasPorFecha.clear()
+            });
+        } else {
+          // si no hay fechas, limpio
           this.reservasPorFecha.clear();
-          for (const r of rows) {
-            if (r.cancelada) continue;
-            const hId   = Number((r as any).horarioId);
-            const fecha = String((r as any).fechaTurno);
-            if (!Number.isFinite(hId) || !fecha) continue;
-            const k = this.key(hId, fecha);
-            this.reservasPorFecha.set(k, (this.reservasPorFecha.get(k) || 0) + 1);
-          }
-        },
-        error: () => this.reservasPorFecha.clear()
+        }
+
+        this.mostrarMensajeTemporal();
       });
-    }
 
-    this.mostrarMensajeTemporal();
-  });
+    // ✅ 2) Cuando algo cambie, recargo del back (con takeUntil)
+    this.horariosService.reservasChanged$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.horariosService.cargarHorarios();
+      });
 
-  // 2) Cuando algo cambie (reservas/bloqueos), recargo del back una sola vez para todas las vistas
-  this.horariosService.reservasChanged$.subscribe(() => {
+    // ✅ 3) Primer snapshot
     this.horariosService.cargarHorarios();
-  });
-
-  // 3) Primer snapshot
-  this.horariosService.cargarHorarios();
-}
-
-  // getDisponibles(diaConFecha: string, hora: string, nivel: string): number {
-  //   const [dia, ddmmyyyy] = diaConFecha.split(' ');
-  //   const turno = this.horarios.find(h =>
-  //     h.dia === dia &&
-  //     this.formatearFecha(h.fecha) === ddmmyyyy &&
-  //     h.hora === hora &&
-  //     (h.nivel || '').toLowerCase() === (nivel || '').toLowerCase()
-  //   );
-  //   if (!turno) return 0;
-
-  //   const total      = Number(turno.totalReformers || 5);
-  //   const bloqueados = Math.max(0, Number(turno.blockedReformers || 0));
-  //   const id         = Number(turno.id); 
-  //   const fechaYMD   = String(turno.fecha);
-  //   const ocupadas   = this.ocupadasEn(id, fechaYMD);
-  //   return Math.max(0, total - ocupadas - bloqueados );
-  // }
-  
-getDisponibles(diaConFecha: string, hora: string, nivel: string): number {
-  const [dia, ddmmyyyy] = diaConFecha.split(' ');
-  const turno = this.horarios.find(h =>
-    h.dia === dia &&
-    this.formatearFecha(h.fecha) === ddmmyyyy &&
-    h.hora === hora &&
-    (h.nivel || '').toLowerCase() === (nivel || '').toLowerCase()
-  );
-  if (!turno) return 0;
-
-  const total      = Number((turno as any).totalReformers ?? 5);
-  const bloqueados = Math.max(0, Number((turno as any).blockedReformers ?? 0));
-
-  const reservadosFromBack = Number((turno as any).reformersReservados ?? NaN);
-  if (Number.isFinite(reservadosFromBack)) {
-    return Math.max(0, total - reservadosFromBack - bloqueados);
   }
 
-  const id       = Number((turno as any).id ?? (turno as any).idHorario);
-  const fechaYMD = String((turno as any).fecha || '');
-  const ocupadas = this['reservasPorFecha'].get(`${id}|${fechaYMD}`) || 0;
+  getDisponibles(diaConFecha: string, hora: string, nivel: string): number {
+    const [dia, ddmmyyyy] = diaConFecha.split(' ');
+    const turno = this.horarios.find(h =>
+      h.dia === dia &&
+      this.formatearFecha(h.fecha) === ddmmyyyy &&
+      h.hora === hora &&
+      (h.nivel || '').toLowerCase() === (nivel || '').toLowerCase()
+    );
+    if (!turno) return 0;
 
-  return Math.max(0, total - ocupadas - bloqueados);
-}
+    const total      = Number((turno as any).totalReformers ?? 5);
+    const bloqueados = Math.max(0, Number((turno as any).blockedReformers ?? 0));
 
+    const reservadosFromBack = Number((turno as any).reformersReservados ?? NaN);
+    if (Number.isFinite(reservadosFromBack)) {
+      return Math.max(0, total - reservadosFromBack - bloqueados);
+    }
+
+    const id       = Number((turno as any).id ?? (turno as any).idHorario);
+    const fechaYMD = String((turno as any).fecha || '');
+    const ocupadas = this.ocupadasEn(id, fechaYMD);
+
+    return Math.max(0, total - ocupadas - bloqueados);
+  }
+
+  getDisponiblesFijo(diaConFecha: string, hora: string, nivel: string): number {
+    const [dia, ddmmyyyy] = diaConFecha.split(' ');
+    const turno = this.horarios.find(h =>
+      h.dia === dia &&
+      this.formatearFecha(h.fecha) === ddmmyyyy &&
+      h.hora === hora &&
+      (h.nivel || '').toLowerCase() === (nivel || '').toLowerCase()
+    );
+    if (!turno) return 0;
+
+    const v = Number((turno as any).reformersFijosDisponibles ?? NaN);
+    return Number.isFinite(v) ? v : 0;
+  }
 
   isDisponible(diaConFecha: string, hora: string, nivel: string): boolean {
     if (this.estadoCierre(diaConFecha, hora) !== 'ninguno') return false;
@@ -283,10 +230,10 @@ getDisponibles(diaConFecha: string, hora: string, nivel: string): number {
   private esCerradoFijo(diaConFecha: string, hora: string): boolean {
     const [dia] = diaConFecha.split(' ');
     return (
-      (dia === 'Miércoles' && (hora === '11:00' || hora === '15:00')) ||
+      (dia === 'Miércoles' && (hora === '11:00' || hora === '15:00'|| hora === '16:00' || hora === '17:00')) ||
       (dia === 'Viernes'   && (hora === '08:00' || hora === '18:00' || hora === '19:00' || hora === '20:00')) ||
       (dia === 'Martes'    && (hora === '19:00' || hora === '20:00')) ||
-      (dia === 'Jueves'    && (hora === '19:00' || hora === '20:00'))
+      (dia === 'Jueves'    && (hora === '15:00' ||hora === '19:00' || hora === '20:00'))
     );
   }
 
@@ -325,4 +272,25 @@ getDisponibles(diaConFecha: string, hora: string, nivel: string): number {
     const d = new Date(`${fecha}T12:00:00-03:00`);
     return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
   }
+
+  tieneAlgoDisponible(diaConFecha: string, hora: string, nivel: string): boolean {
+    if (this.estadoCierre(diaConFecha, hora) !== 'ninguno') return false;
+    if (!nivel || nivel === 'No disponible') return false;
+
+    const libres = this.getDisponibles(diaConFecha, hora, nivel);
+    const fijos  = this.getDisponiblesFijo(diaConFecha, hora, nivel);
+
+    return (libres > 0) || (fijos > 0);
+  }
+
+  esSoloFijo(diaConFecha: string, hora: string, nivel: string): boolean {
+    if (this.estadoCierre(diaConFecha, hora) !== 'ninguno') return false;
+    if (!nivel || nivel === 'No disponible') return false;
+
+    const libres = this.getDisponibles(diaConFecha, hora, nivel);
+    const fijos  = this.getDisponiblesFijo(diaConFecha, hora, nivel);
+
+    return (libres <= 0) && (fijos > 0);
+  }
+
 }

@@ -9,14 +9,15 @@ import { Horario } from '../horarios/horarios.entity';
 import { DashboardService } from './dashboard.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { WhatsAppModule } from 'src/whatsapp/whatsapp.module';
-import { DashboardCron } from './dashboard.cron';
+import { PagosModule } from 'src/pagos/pagos.module';
+
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Pago, User, ValorPlan, Reserva, Horario]),
-    WhatsAppModule,],
+    WhatsAppModule,PagosModule,],
   controllers: [DashboardController],
-  providers: [DashboardService, RolesGuard, DashboardCron],
+  providers: [DashboardService, RolesGuard],
   exports: [DashboardService],
 })
 export class DashboardModule {}

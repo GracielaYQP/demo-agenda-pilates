@@ -20,6 +20,7 @@ h2 {
   background: linear-gradient(to bottom, #ffffff, #dbccd1);
   border-radius: 6px;
   box-shadow: inset 0 0 0 1px #ddd;
+  margin-bottom: 16px;
   display: block;
   width: fit-content;
   margin: 10px auto 40px auto;
@@ -53,15 +54,13 @@ th {
   box-shadow: inset 0 0 0 1px #ddd;
   border: 2px solid black;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
-  
-  
 }
 
 td {
   padding: 2px 3px;
 }
 
-td > div {
+.tabla-turnos td > div {
   padding: 4px 6px;
   border-radius: 6px;
   font-weight: bold;
@@ -84,6 +83,35 @@ tbody tr:hover {
   box-shadow: inset 0 0 0 1px #ddd;
   border: 2px solid black;
 }
+
+.titulo-con-boton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.btn-asistencia {
+  background-color: var(--primary);
+  color: white;
+  font-weight: bold;
+  border: 2px solid black;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-asistencia:hover {
+  background-color: color-mix(in srgb, var(--primary) 85%, black);
+  color: black;
+  transform: scale(1.05);
+}
+
 
 .feriado {
   background: repeating-linear-gradient(
@@ -202,13 +230,13 @@ tbody tr:hover {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.5); /* fondo oscuro semitransparente */
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999;
 }
 
 .modal-content {
@@ -246,8 +274,6 @@ tbody tr:hover {
 .modal-content button:hover {
   background-color: color-mix(in srgb, var(--primary) 85%, black);
   color: black;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
 }
 
 .modal-content button:focus {
@@ -261,13 +287,6 @@ tbody tr:hover {
 text-align: center; 
 font-weight: bold; 
 margin-top: 10px;
-}
-
-.recuperacion {
-  background-color: rgba(173, 216, 230, 0.9); /* celeste claro */
-  color: #004466;
-  font-weight: bold;
-  border: 2px dashed #4094b2;
 }
 
 .aviso-recuperacion-fijo {
@@ -333,6 +352,147 @@ margin-top: 10px;
 }
 
 .cerrado-label { font-style: italic; font-weight: 700; font-size: .85rem; }
+
+
+.modal-content-asistencia {
+  width: 96%;
+  max-width: 800px; 
+  padding: 30px 25px;
+  background: rgba(255, 255, 255, 0.95);
+  background-blend-mode: lighten;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: auto;           
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabla-asistencia {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 4px 4px;
+  text-align: center;
+  min-width: 0;              
+}
+
+.tabla-asistencia th,
+.tabla-asistencia td {
+  padding: 6px 8px;
+  border: 1px solid #999;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #ddd;
+  font-size: 0.9rem;
+}
+
+.acciones-asistencia{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:12px;
+}
+
+.btn-secundario{
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #999;
+  background: #f2f2f2;
+  cursor: pointer;
+}
+
+.bloque-anio{
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0,0,0,.2);
+}
+
+.anio-titulo{
+  margin: 0 0 8px 0;
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.ciclo-card{
+  background: rgba(255,255,255,.9);
+  border: 1px solid rgba(0,0,0,.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 8px 0;
+}
+
+.ciclo-fechas{
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.ciclo-resumen{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 10px 14px;
+  font-size: .95rem;
+}
+
+.ciclo-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.btn-toggle{
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  font-weight:700;
+  color:var(--primary);
+}
+
+.ciclo-detalle{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+  gap:12px;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px dashed rgba(0,0,0,.3);
+}
+
+.detalle-col{
+  font-size:.9rem;
+}
+
+.detalle-col strong{
+  display:block;
+  margin-bottom:4px;
+  color:#333;
+}
+/* Opcional: un poquito más chico en celu */
+@media (max-width: 480px) {
+  .tabla-asistencia th,
+  .tabla-asistencia td {
+    font-size: 0.8rem;
+    padding: 4px 6px;
+  }
+}
+.modal-content-asistencia .sublinea {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.text-danger { color: #b00020; }
+
+.modal-content-asistencia .btn-cerrar {
+  background-color: #a8a6a6;
+  color: #333;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  width: auto;           
+  display: block;        
+  margin: 16px auto 0;  
+}
 
 @media (max-width: 768px) {
   .table-container {
@@ -419,6 +579,22 @@ margin-top: 10px;
   }
 }
 
+/* ====== FORZAR que la tabla del modal NO sea sticky ====== */
+
+.modal-content-asistencia .tabla-asistencia {
+  table-layout: auto;
+  min-width: 0 !important;  
+}
+
+/* Quitar sticky de encabezados y primera columna dentro del modal */
+.modal-content-asistencia .tabla-asistencia thead th,
+.modal-content-asistencia .tabla-asistencia tbody td:first-child {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  z-index: auto !important;
+}
+
 /* ===== Móviles (<= 480px) ===== */
 @media (max-width: 480px) {
   .table-container {
@@ -479,4 +655,341 @@ margin-top: 10px;
     z-index: 5;
     background: linear-gradient(to bottom, #ffffff, #dbccd1);
   }
+}
+
+@media (max-width: 768px) {
+
+  /* el modal ocupa casi todo el ancho y sin scroll horizontal */
+  .modal-content-asistencia {
+    max-width: 95%;
+    overflow-x: hidden;
+  }
+
+  /* la tabla se comporta más como una lista de tarjetas */
+  .modal-content-asistencia .tabla-asistencia {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    min-width: 0;
+  }
+
+  /* oculto el header (Mes / Asistidas / Recuperadas / Canceladas),
+     porque ya está “etiquetado” dentro de cada celda */
+  .modal-content-asistencia .tabla-asistencia thead {
+    display: none;
+  }
+
+  /* cada fila = una tarjeta por mes */
+  .modal-content-asistencia .tabla-asistencia tr {
+    display: block;
+    margin-bottom: 12px;
+    border: 1px solid #999;
+    border-radius: 10px;
+    background: #fff;
+    padding: 8px 10px;
+  }
+
+  /* cada celda ocupa todo el ancho, una debajo de la otra */
+  .modal-content-asistencia .tabla-asistencia td {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid #eee;
+    padding: 6px 4px;
+    white-space: normal;      /* permite que el texto salte de renglón */
+    position: static !important;  /* anulamos cualquier sticky heredado */
+    left: auto !important;
+    top: auto !important;
+    z-index: auto !important;
+  }
+
+  /* la última celda de la tarjeta sin línea abajo */
+  .modal-content-asistencia .tabla-asistencia td:last-child {
+    border-bottom: none;
+  }
+
+  /* opcional: título de mes centrado y fuerte */
+  .modal-content-asistencia .tabla-asistencia td:first-child {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+   /* Etiquetas de cada “cajita” usando ::before */
+  .modal-content-asistencia .tabla-asistencia tr td:nth-child(2)::before {
+    content: 'ASISTIDAS';
+    display: block;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 2px;
+    text-align: left;
+  }
+
+  .modal-content-asistencia .tabla-asistencia tr td:nth-child(3)::before {
+    content: 'RECUPERADAS';
+    display: block;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 2px;
+    text-align: left;
+  }
+
+  .modal-content-asistencia .tabla-asistencia tr td:nth-child(4)::before {
+    content: 'CANCELADAS';
+    display: block;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 2px;
+    text-align: left;
+  }
+
+  .modal-content-asistencia .tabla-asistencia tr td:nth-child(5)::before {
+    content: 'ESTUDIO CERRADO';
+    display: block;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 2px;
+    text-align: left;
+  }
+}
+.modal-content-asistencia h3 {
+  line-height: 1.3;
+  text-align: center;
+}
+
+.modal-content-asistencia h3 .nombre-alumno {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: block;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.titulo-con-boton{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* IMPORTANTE: en este bloque NO uses el h2 general */
+.titulo-con-boton h2{
+  margin: 0;
+}
+
+/* opcional: si querés que quede “bien a la altura” */
+.btn-asistencia{
+  height: 42px;
+  display:inline-flex;
+  align-items:center;
+}
+
+/* ===== MODAL ASISTENCIA: celdas con borde, texto sin borde ===== */
+
+/* ✔️ Mantenemos el contorno de la celda */
+.modal-content-asistencia .tabla-asistencia th,
+.modal-content-asistencia .tabla-asistencia td {
+  border: 1px solid #999;
+  border-radius: 8px;
+  background: rgba(255,255,255,.65);
+  box-shadow: inset 0 0 0 1px #ddd;
+}
+
+/* ❌ Quitamos CUALQUIER borde/sombra del contenido interno */
+.modal-content-asistencia .tabla-asistencia th *,
+.modal-content-asistencia .tabla-asistencia td * {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+
+.cancelada {
+  background-color: rgba(176, 0, 32, 0.18) !important; 
+  color: #6b0015 !important;
+  font-weight: 900;
+  border: 2px dashed #b00020 !important;
+} */
+
+/* =========================================================
+   MIS TURNOS — ESTADOS (recup / suelta / cancelada)
+   Objetivo:
+   - Fondo SIEMPRE del nivel (basico/intermedio/avanzado)
+   - Solo cambia color del NOMBRE + badge
+   - Un borde suave para distinguir
+========================================================= */
+
+/* 1) Forzar que el fondo venga SIEMPRE del nivel */
+.clickeable.basico     { background-color: #d4edda !important; color:#1d3557 !important; }
+.clickeable.intermedio { background-color: #fff3cd !important; color:#333    !important; }
+.clickeable.avanzado   { background-color: #f8d7da !important; color:#900    !important; }
+
+/* 2) El “nombre” (tu .reformers) por defecto */
+.clickeable .reformers { color: inherit; }
+
+/* ================= RECUPERACION ================= */
+/* No toca el fondo: solo borde y nombre en verde */
+.clickeable.recuperacion{
+  border: 2px dashed rgba(10,122,68,.75) !important;
+  box-shadow: 0 8px 18px rgba(10,122,68,.15);
+}
+.clickeable.recuperacion .reformers{
+  color: #0a7a44 !important;
+  font-weight: 900;
+}
+
+/* ================= CANCELADA ================= */
+/* No toca el fondo: solo borde y nombre en rojo + texto “Cancelada” */
+.clickeable.cancelada{
+  border: 2px dashed rgba(176,0,32,.75) !important;
+  box-shadow: 0 8px 18px rgba(176,0,32,.12);
+}
+.clickeable.cancelada .reformers{
+  color: #b00020 !important;
+  font-weight: 900;
+}
+
+/* ================= SUELTA ================= */
+/* Suelta sí puede ser azul suave (si querés mantener nivel, decime y lo cambio) */
+.clickeable.suelta{
+  background-color: rgba(24,87,165,.20) !important;
+  border: 2px dashed rgba(24,87,165,.85) !important;
+  box-shadow: 0 8px 18px rgba(24,87,165,.12);
+}
+.clickeable.suelta .reformers{
+  color: #1857a5 !important;
+  font-weight: 900;
+}
+
+/* ================= BADGES ================= */
+.badge-recup,
+.badge-suelta,
+.badge-cancelada{
+  display:inline-block;
+  margin-left:8px;
+  font-size:.75rem;
+  padding:2px 8px;
+  border-radius:999px;
+  background: rgba(255,255,255,.9);
+  border:1px solid rgba(0,0,0,.25);
+  font-weight: 900;
+}
+
+.badge-recup      { color:#0a7a44; }
+.badge-suelta     { color:#1857a5; }
+.badge-cancelada  { color:#b00020; }
+/* ===== MIS TURNOS: tamaño uniforme de celdas ocupadas ===== */
+
+/* Alto fijo para todas las celdas clickeables (ocupadas) */
+.tabla-turnos .clickeable{
+  min-height: 56px;          /* ajustá: 52–60 */
+  height: 56px;              /* fuerza que no crezca */
+  padding: 6px 8px;          /* más compacto */
+  box-sizing: border-box;
+  overflow: hidden;          /* evita que “empuje” el alto */
+}
+
+/* Línea del nivel (arriba) */
+.tabla-turnos .clickeable .nivel{
+  font-size: 14px;
+  line-height: 1.1;
+  margin-bottom: 3px;
+}
+
+/* Línea del nombre (medio) */
+.tabla-turnos .clickeable .reformers{
+  font-size: 12px;
+  line-height: 1.1;
+  white-space: nowrap;       /* que no salte de línea */
+  overflow: hidden;
+  text-overflow: ellipsis;   /* “…” si es largo */
+  max-width: 100%;
+}
+
+/* Badge abajo (Recup/Suelta/Cancelada) */
+.tabla-turnos .badge-recup,
+.tabla-turnos .badge-suelta,
+.tabla-turnos .badge-cancelada{
+  display: block;            /* baja a otra línea */
+  width: fit-content;
+  margin: 4px auto 0;        /* centrado abajo */
+  font-size: 0.70rem;
+  padding: 1px 8px;
+  line-height: 1.1;
+}
+
+/* Solo para recup: que el nombre no “empuje” */
+.tabla-turnos .clickeable.recuperacion .reformers{
+  font-weight: 900;
+}
+/* ===== ancho fijo de columnas/celdas ===== */
+
+/* 1) columnas fijas */
+.tabla-turnos{
+  table-layout: fixed;   /* clave */
+  width: 100%;
+}
+
+/* 2) todas las celdas (td) mismo ancho por columna */
+.tabla-turnos th,
+.tabla-turnos td{
+  width: 110px;          /* ajustá: 100–130 */
+}
+
+/* 3) la columna "Horario" más angosta */
+.tabla-turnos th:first-child,
+.tabla-turnos td.hora-columna{
+  width: 90px;           /* ajustá */
+}
+
+/* 4) el bloque interno ocupa TODO el ancho del td */
+.tabla-turnos .clickeable,
+.tabla-turnos .no-disponible{
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+/* ===== FIX: que se lea (nivel + nombre + badge) sin agrandar ancho ===== */
+.tabla-turnos .clickeable{
+  height: 66px;          /* subimos un poco el alto */
+  min-height: 66px;
+  padding: 6px 6px;      /* más compacto */
+  gap: 3px;              /* espacio entre líneas */
+  justify-content: center;
+  overflow: hidden;      /* que no se desborde */
+}
+
+/* nivel */
+.tabla-turnos .clickeable .nivel{
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.05;
+}
+
+/* nombre */
+.tabla-turnos .clickeable .reformers{
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* badge abajo: NO block (así no empuja raro) */
+.tabla-turnos .badge-recup,
+.tabla-turnos .badge-suelta,
+.tabla-turnos .badge-cancelada{
+  display: inline-block;   /* <-- clave */
+  margin: 0;
+  font-size: 0.70rem;
+  line-height: 1;
+  padding: 2px 8px;
 }

@@ -19,26 +19,24 @@ import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
    imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'carola20958',
-      database: 'demo_agenda_pilates',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true,
-    }),
     ConfigModule.forRoot({ 
       isGlobal: true,
       envFilePath: [
-        `.env.${process.env.NODE_ENV}.local`, // ej: .env.production.local
-        `.env.${process.env.NODE_ENV}`,       // ej: .env.production
-        `.env.local`,                         // si querés sobreescribir
-        `.env`,                               // fallback
+        `.env.${process.env.NODE_ENV}.local`, 
+        `.env.${process.env.NODE_ENV}`,       
+        `.env`,                              
         `.env.production`,
       ],
     }),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      url: process.env.DATABASE_URL,
+      synchronize: process.env.DB_SYNC === 'true',
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      ssl: false,
+    }),
+
+    
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,

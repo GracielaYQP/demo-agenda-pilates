@@ -28,7 +28,7 @@ export class Invitacion {
   @Column({ type: 'varchar', length: 10, default: 'alumno' })
   rol!: RolInvitacion;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
   nivel_asignado?: string | null;
 
   @Column({ type: 'varchar', length: 12, default: 'pendiente' })

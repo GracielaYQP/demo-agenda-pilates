@@ -4,10 +4,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PagosController } from './pagos.controller';
 import { PagosService } from './pagos.service';
 import { Pago } from './pagos.entity'; 
+import { ReservaModule } from 'src/reserva/reserva.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Pago]), 
+    TypeOrmModule.forFeature([Pago]),
+    ReservaModule, 
   ],
   controllers: [PagosController],
   providers: [PagosService],

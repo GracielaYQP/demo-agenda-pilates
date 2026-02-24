@@ -3,7 +3,7 @@ import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { InvitacionesModule } from '../invitaciones/invitaciones.module';
 import { MailerService } from './mailer/mailer.service';
@@ -18,12 +18,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (cfg: ConfigService) => ({
-        secret: cfg.get<string>('JWT_SECRET', 'secretKey'),
+      useFactory: (cfg: ConfigService): JwtModuleOptions => ({
+        secret: cfg.get<string>('JWT_SECRET')!,
         signOptions: {
-          expiresIn: cfg.get<string>('JWT_EXPIRES_IN', '1d'),
-          issuer: cfg.get<string>('JWT_ISSUER', 'lucia-pilates'),
-          audience: cfg.get<string>('JWT_AUDIENCE', 'lucia-pilates-web'),
+          // ✅ Cast porque en .env viene string
+          expiresIn: cfg.get<string>('JWT_EXPIRES_IN') as any,
+          issuer: cfg.get<string>('JWT_ISSUER'),
+          audience: cfg.get<string>('JWT_AUDIENCE'),
         },
       }),
     }),

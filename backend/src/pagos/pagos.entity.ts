@@ -2,10 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Unique, CreateDateCo
 import { User } from '../users/user.entity';
 
 @Entity('pagos')
-@Unique('u_user_mes_anio', ['userId', 'mes', 'anio'])
-@Index('i_anio_mes', ['anio','mes'])
-@Index('i_user_anio_mes', ['userId','anio','mes'])
-
+@Index('i_user_ciclo', ['userId','cicloInicio','cicloFin'])
+@Unique('u_user_ciclo', ['userId','cicloInicio','cicloFin'])
 export class Pago {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -17,11 +15,19 @@ export class Pago {
   @JoinColumn({ name: 'userId' })
   user!: User;
 
-  @Column({ type: 'int' })   // 1..12
-  mes!: number;
+  // ✅ NUEVO: pago asociado al ciclo (ventana de clases del plan)
+  @Column({ type: 'date' })
+  cicloInicio!: string; // YYYY-MM-DD
 
-  @Column({ type: 'int' })   // 2025
-  anio!: number;
+  @Column({ type: 'date' })
+  cicloFin!: string;    // YYYY-MM-DD
+
+  // (opcional) mantener mes/anio solo para compatibilidad/historial viejo
+  @Column({ type: 'int', nullable: true })
+  mes!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  anio!: number | null;
 
   @Column({ type: 'enum', enum: ['suelta','4','8','12'] })
   planTipo!: 'suelta'|'4'|'8'|'12';

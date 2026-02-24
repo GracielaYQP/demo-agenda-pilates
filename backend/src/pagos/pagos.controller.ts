@@ -1,30 +1,27 @@
+// pagos.controller.ts
 import { Controller, Get, Post, Body, Query, Delete, Param, ParseIntPipe } from '@nestjs/common';
 import { PagosService } from './pagos.service';
-import { UpsertPagoDto } from './dto/upsert-pago.dto';
+import { UpsertPagoCicloDto } from './dto/upsert-pago-ciclo.dto';
 
 @Controller('pagos')
 export class PagosController {
   constructor(private readonly svc: PagosService) {}
-
-  @Get('estado')
-  estado(@Query('userId') userId: number, @Query('mes') mes: number, @Query('anio') anio: number) {
-    return this.svc.estado(+userId, +mes, +anio);
+  
+  @Get('estado-ciclo-actual')
+  estadoCicloActual(@Query('userId') userId: number) {
+    return this.svc.estadoCicloActual(+userId);
   }
 
-  @Get('estado-actual')
-  estadoActual(@Query('userId') userId: number) {
-    return this.svc.estadoActual(+userId);
+  @Post('confirmar-ciclo')
+  confirmarPagoCiclo(@Body() dto: UpsertPagoCicloDto) {
+    return this.svc.upsertConfirmadoCiclo(dto);
   }
 
-  @Post('confirmar')
-  confirmar(@Body() dto: UpsertPagoDto) {
-    return this.svc.upsertConfirmado(dto);
+  @Delete(':id')
+  eliminar(@Param('id', ParseIntPipe) id: number) {
+    return this.svc.eliminar(id);
   }
 
-  @Delete()
-  eliminar(@Query('userId') userId: number, @Query('mes') mes: number, @Query('anio') anio: number) {
-    return this.svc.eliminar(+userId, +mes, +anio);
-  }
 
   @Get('resumen')
   resumen(@Query('mes') mes: string, @Query('anio') anio: string) {

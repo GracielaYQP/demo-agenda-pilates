@@ -54,9 +54,10 @@ export class AuthService {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('nombreUsuario');
-    localStorage.removeItem('apellidoUsuario'); // ← faltaba
+    localStorage.removeItem('apellidoUsuario'); 
     localStorage.removeItem('rol');
     localStorage.removeItem('nivelUsuario');
+    localStorage.removeItem('planMensual');
   }
 
   isLoggedIn(): boolean {
@@ -100,6 +101,14 @@ export class AuthService {
     return this.http.post(`${this.api}/auth/register-invitacion`, data);
   }
 
+  isSuperadmin(): boolean {
+    return this.hasRole('superadmin');
+  }
+
+  isAdminLike(): boolean {
+    const rol = (this.getRol() || '').trim().toLowerCase();
+    return rol === 'admin' || rol === 'superadmin';
+  }
 
 }
 

@@ -43,7 +43,8 @@ export class HeaderComponent implements OnInit, AfterViewInit {
   }
 
   get isAdmin(): boolean {
-    return localStorage.getItem('rol') === 'admin';
+    const rol = (this.auth.getRol() || '').trim().toLowerCase();
+    return rol === 'admin' || rol === 'superadmin';
   }
 
   logout() {

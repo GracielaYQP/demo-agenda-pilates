@@ -7,7 +7,7 @@ export type InvitacionVerificarResponse = {
   valida: boolean;
   telefono: string;
   rol: 'admin' | 'alumno' | 'superadmin' | string;
-  nivel: string | null; // porque tu backend manda null si rol=admin
+  nivel: string | null; 
 };
 
 @Injectable({

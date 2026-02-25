@@ -9,7 +9,14 @@ export const routes: Routes = [
   { path: 'register', loadComponent: () => import('./auth/registro/registro.component').then(m => m.RegistroComponent) },
   { path: 'clases', loadComponent: () => import('./pages/clases/clases.component').then(m => m.ClasesComponent) },
   { path: 'horarios-disponibles', loadComponent: () => import('./horarios-disponibles/horarios-disponibles.component').then(m => m.HorariosDisponiblesComponent) },
-  { path: 'dashboard-tabs', loadComponent: () => import('./admin/dashboard-tabs/dashboard-tabs.component').then(m => m.DashboardTabsComponent) },
+  {
+    path: 'dashboard-tabs',
+    canActivate: [AuthGuard],
+    data: { roles: ['admin', 'superadmin'] },
+    loadComponent: () =>
+      import('./admin/dashboard-tabs/dashboard-tabs.component')
+        .then(m => m.DashboardTabsComponent)
+  },
   { 
     path: 'planes',
     canActivate: [AuthGuard], 
@@ -30,26 +37,26 @@ export const routes: Routes = [
 
   {
     path: 'admin/invitaciones',
-    canActivate: [AuthGuard], data: { roles: ['admin'] },
+    canActivate: [AuthGuard], data: { roles: ['admin', 'superadmin'] },
     loadComponent: () => import('./admin/invitaciones/invitaciones.component').then(m => m.InvitacionesComponent)
   },
   
   {
     path: 'listar-alumnos',
-    canActivate: [AuthGuard], data: { roles: ['admin'] },
+    canActivate: [AuthGuard], data: { roles: ['admin', 'superadmin'] },
     loadComponent: () => import('./admin/listar-alumnos/listar-alumnos.component').then(m => m.ListarAlumnosComponent)
   },
 
   { path: 'editar-usuario/:id', loadComponent: () => import('./admin/editar-usuario/editar-usuario.component').then(m => m.EditarUsuarioComponent) },
   { path: 'reset-password/:token', loadComponent: () => import('./admin/reset-password/reset-password.component').then(m => m.ResetPasswordComponent) },
   { path: 'clases-suspendidas',  
-    canActivate: [AuthGuard], data: { roles: ['admin'] },
+    canActivate: [AuthGuard], data: { roles: ['admin', 'superadmin'] },
     loadComponent: () => import('./admin/clases-suspendidas/clases-suspendidas.component').then(m => m.ClasesSuspendidasComponent) },
   { path: 'valor-planes',  
-    canActivate: [AuthGuard], data: { roles: ['admin'] },
+    canActivate: [AuthGuard], data: { roles: ['admin', 'superadmin'] },
     loadComponent: () => import('./admin/valor-planes/valor-planes.component').then(m => m.ValorPlanesComponent) },
 
-  // Páginas legales (también lazy)
+  // Páginas legales 
   { path: 'terminos-y-condiciones', loadComponent: () => import('./pages/terminos-y-condiciones/terminos-y-condiciones.component').then(m => m.TerminosYCondicionesComponent) },
   { path: 'politica-de-privacidad', loadComponent: () => import('./pages/politica-de-privacidad/politica-de-privacidad.component').then(m => m.PoliticaDePrivacidadComponent) },
   { path: 'politica-de-cookies', loadComponent: () => import('./pages/politica-de-cookies/politica-de-cookies.component').then(m => m.PoliticaDeCookiesComponent) },

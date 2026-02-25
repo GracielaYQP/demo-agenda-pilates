@@ -18,18 +18,21 @@ export class UsersController {
   ) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'superadmin') 
+  @Roles('admin', 'superadmin')
   @Post()
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  create(@Req() req: any, @Body() dto: CreateUserDto) {
+    const creatorRole = String(req.user?.rol ?? '').toLowerCase();
+    return this.usersService.create(dto, creatorRole);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'superadmin')
   @Get("/obtenerListadoUsuarios")
     obtenerListadoUsuarios(){
         return this.usersService.obtenerListadoUsuarios();
   }
 
-@Patch("/modificarUsuario/:id")
+  @Patch("/modificarUsuario/:id")
   update(@Param('id') id: string, @Body() body: any) {
     const userId = parseInt(id, 10);
     if (isNaN(userId)) {
@@ -53,7 +56,7 @@ export class UsersController {
       return this.usersService.inactivarUsuario(id);
   }
 
-    @Get('buscar')
+  @Get('buscar')
   async buscarPorNombreYApellido(
     @Query('nombre') nombre: string,
     @Query('apellido') apellido: string

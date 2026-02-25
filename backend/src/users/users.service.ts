@@ -5,6 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import { User } from './user.entity';
 import { Reserva } from '../reserva/reserva.entity';
 import { Horario } from '../horarios/horarios.entity';
+import { CreateUserDto } from './user.dto';
 
 
 @Injectable()
@@ -18,52 +19,45 @@ export class UsersService {
     private horarioRepo: Repository<Horario>
     ) {}
 
-  async create(userData: {
-    email: string;
-    nombre: string;
-    apellido: string;
-    dni: string;
-    telefono: string; 
-    password: string;
-    nivel: string;
-    planMensual: '0' |'4' | '8' | '12';
-  }): Promise<User> {
+  async create(dto: CreateUserDto, creatorRole: string): Promise<User> {
+    const creator = String(creatorRole ?? '').toLowerCase();
 
-    // Validar email único
-    const existingEmail = await this.userRepository.findOne({
-      where: { email: userData.email },
-    });
-    if (existingEmail) {
-      throw new BadRequestException('El email ya está registrado');
+    // ✅ rol solicitado (si no viene, alumno)
+    const requestedRole = String(dto.rol ?? 'alumno').toLowerCase();
+
+    // 🔒 reglas
+    if (requestedRole === 'admin' && creator !== 'superadmin') {
+      throw new BadRequestException('Solo el superadmin puede crear administradores.');
+    }
+    if (requestedRole !== 'alumno' && requestedRole !== 'admin') {
+      throw new BadRequestException('Rol inválido. Use "alumno" o "admin".');
     }
 
-    // Validar DNI único
-    const existingDNI = await this.userRepository.findOne({
-      where: { dni: userData.dni },
-    });
-    if (existingDNI) {
-      throw new BadRequestException('El DNI ya está registrado');
-    }
+    // ✅ Validar email único
+    const existingEmail = await this.userRepository.findOne({ where: { email: dto.email } });
+    if (existingEmail) throw new BadRequestException('El email ya está registrado');
 
-    // Validar teléfono único
-    const existingTel = await this.userRepository.findOne({
-      where: { telefono: userData.telefono },
-    });
-    if (existingTel) {
-      throw new BadRequestException('El teléfono ya está registrado');
-    }
-    
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
-    const planStr = String(userData.planMensual) as '0' | '4' | '8' | '12';
+    // ✅ Validar DNI único
+    const existingDNI = await this.userRepository.findOne({ where: { dni: dto.dni } });
+    if (existingDNI) throw new BadRequestException('El DNI ya está registrado');
+
+    // ✅ Validar teléfono único
+    const existingTel = await this.userRepository.findOne({ where: { telefono: dto.telefono } });
+    if (existingTel) throw new BadRequestException('El teléfono ya está registrado');
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const planStr = String(dto.planMensual) as '0' | '4' | '8' | '12';
+
     const user = this.userRepository.create({
-      email: userData.email,
-      nombre: userData.nombre,
-      apellido: userData.apellido,
-      dni: userData.dni,
-      telefono: userData.telefono,
+      email: dto.email,
+      nombre: dto.nombre,
+      apellido: dto.apellido,
+      dni: dto.dni,
+      telefono: dto.telefono,
       password: hashedPassword,
-      nivel: userData.nivel,
+      nivel: dto.nivel,
       planMensual: planStr,
+      rol: requestedRole as any, // 'alumno' o 'admin'
     });
 
     return await this.userRepository.save(user);
@@ -101,7 +95,7 @@ export class UsersService {
   async obtenerListadoUsuarios() {
     return await this.userRepository
       .createQueryBuilder('user')
-      .where('LOWER(user.rol) != :rol', { rol: 'admin' }) // ⛔ Excluye admins
+      .where('LOWER(user.rol) NOT IN (:...roles)', { roles: ['admin', 'superadmin'] }) 
       .orderBy('user.apellido', 'ASC')
       .addOrderBy('user.nombre', 'ASC')
       .getMany(); // ✅ Incluye activos e inactivos

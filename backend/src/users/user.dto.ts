@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsNotEmpty, Matches } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, Matches } from 'class-validator';
 
 export class CreateUserDto {
   @IsNotEmpty()
@@ -29,5 +29,9 @@ export class CreateUserDto {
       'La contraseña debe tener entre 8 a 20 caracteres, al menos una letra mayúscula, un número y un símbolo.',
   })
   password!: string;
+
+  @IsOptional()
+  @IsIn(['alumno', 'admin'])
+  rol?: 'alumno' | 'admin';
 }
 

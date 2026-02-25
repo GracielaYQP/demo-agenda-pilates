@@ -19,7 +19,7 @@ export class UsersService {
     private horarioRepo: Repository<Horario>
     ) {}
 
-  async create(dto: CreateUserDto, creatorRole: string): Promise<User> {
+  async create(dto: CreateUserDto, creatorRole: string= 'superadmin'): Promise<User> {
     const creator = String(creatorRole ?? '').toLowerCase();
 
     // ✅ rol solicitado (si no viene, alumno)

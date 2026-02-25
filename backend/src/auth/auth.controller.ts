@@ -10,6 +10,7 @@ import { JwtAuthGuard } from './jwt.guard';
 import { RolesGuard } from './roles.guard';
 import { Roles } from './roles.decorator';
 import { BootstrapAdminDto } from './dto/bootstrap-admin.dto';
+import { CreateUserDto } from 'src/users/user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -42,34 +43,40 @@ export class AuthController {
       throw new BadRequestException('Invitación expirada.');
     }
 
-    const esAdmin = invitacion.rol === 'admin';
-  
+    const esAdmin = String(invitacion.rol ?? '').trim().toLowerCase() === 'admin';
+
     // ✅ Si es alumno, nivel debe existir
     if (!esAdmin && (!invitacion.nivel_asignado || !invitacion.nivel_asignado.trim())) {
       throw new BadRequestException('Invitación inválida: falta nivel asignado.');
     }
 
-    // ✅ crear usuario
-    const user = await this.authService.createUser({
+    // ✅ crear usuario DIRECTO con rol según invitación
+    // ✅ armar payload tipado
+    const payload: CreateUserDto = {
       email: dto.email,
       nombre: dto.nombre,
       apellido: dto.apellido,
       dni: dto.dni,
       telefono: invitacion.telefono,
       password: dto.password,
-
       nivel: esAdmin ? 'Básico' : invitacion.nivel_asignado!,
       planMensual: esAdmin ? '0' : dto.planMensual,
-    });
+      rol: esAdmin ? 'admin' : 'alumno',
+    };
 
-    // ✅ si era invitación admin: elevar rol + setear demo 10 días
+    // ✅ crear usuario con permiso según tipo de invitación
+    const user = await this.usersService.create(
+      payload,
+      esAdmin ? 'superadmin' : 'admin'
+    );
+
+    // ✅ si era invitación admin: setear demo 10 días (sin tocar rol)
     if (esAdmin) {
       const ahora = new Date();
       const demoHasta = new Date(ahora);
       demoHasta.setDate(ahora.getDate() + 10);
 
       await this.usersService.update(user.id, {
-        rol: 'admin',
         esDemo: true,
         demoDesde: ahora,
         demoHasta: demoHasta,
@@ -79,13 +86,13 @@ export class AuthController {
     // ✅ marcar invitación usada
     await this.invitacionesService.marcarComoUsada(invitacion.id);
 
-    // ✅ autologin usando el teléfono (o email) + password
+    // ✅ autologin usando el teléfono + password
     const login = await this.authService.loginFlexible(invitacion.telefono, dto.password);
 
     return {
       success: true,
       message: 'Registro exitoso',
-      ...login, // access_token, nombre, apellido, dni, rol, nivel
+      ...login,
     };
   }
 

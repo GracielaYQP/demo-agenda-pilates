@@ -27,7 +27,7 @@ export class AuthService {
 
   // Registro normal
   async register(dto: CreateUserDto) {
-    return this.usersService.create(dto); 
+    return this.usersService.create(dto, 'admin'); 
   }
 
   // Login normal
@@ -79,7 +79,7 @@ export class AuthService {
   // Crear usuario desde invitación
   async createUser(data: CreateUserDto): Promise<User> {
     // 👇 Le pasamos la password en texto plano y UsersService.create se encarga de hashearla
-    return this.usersService.create(data);
+    return this.usersService.create(data, 'admin');
   }
 
   async sendResetPasswordWhatsappLinkByUsuario(usuario: string) {
@@ -186,7 +186,10 @@ export class AuthService {
       password: dto.password,
       nivel: 'Básico',
       planMensual: '0',
-    });
+      rol: 'admin',
+    } as any,
+    'superadmin'
+    );
 
     // ✅ Elevar a superadmin
     await this.usersService.update(user.id, { rol: 'superadmin', activo: true });

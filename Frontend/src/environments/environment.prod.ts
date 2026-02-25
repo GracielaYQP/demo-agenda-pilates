@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.luciacarlettapilates.com',
-  frontBaseUrl: 'https://agendapilates.thysetech.com/#/',
+  apiUrl: 'https://api.agendapilates.thysetech.com',
+  frontBaseUrl: 'https://api.agendapilates.thysetech.com/#/',
 };

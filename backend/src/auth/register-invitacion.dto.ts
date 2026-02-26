@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsIn } from 'class-validator';
+import { IsString, IsNotEmpty, IsIn, Matches } from 'class-validator';
 
 export class RegisterInvitacionDto {
   
@@ -17,6 +17,11 @@ export class RegisterInvitacionDto {
   @IsString()
   @IsNotEmpty()
   email!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^[0-9]{10,13}$/)
+  telefono!: string;
 
   @IsNotEmpty()
   @IsIn(['0','4', '8', '12'])

@@ -149,6 +149,7 @@ export class InvitacionesComponent {
 
         const generatedLink = `${base}/#/register?token=${res.token}`;
         this.generatedLink = generatedLink;
+        console.log('LINK FINAL =', this.generatedLink);
         const numeroSinEspacios = payload.telefono.replace(/\s/g, '');
         console.log('frontBaseUrl=', this.frontBaseUrl);
         console.log('apiUrl=', this.api);

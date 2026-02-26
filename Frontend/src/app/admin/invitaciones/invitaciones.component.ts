@@ -150,6 +150,8 @@ export class InvitacionesComponent {
         const generatedLink = `${base}/#/register?token=${res.token}`;
         this.generatedLink = generatedLink;
         const numeroSinEspacios = payload.telefono.replace(/\s/g, '');
+        console.log('frontBaseUrl=', this.frontBaseUrl);
+        console.log('apiUrl=', this.api);
         const textoPlano = [
           '¡Hola! Soy XXX de Demos Estudio...',
           'Te envío el link para completar tu registro:',

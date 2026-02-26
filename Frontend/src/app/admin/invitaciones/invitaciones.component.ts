@@ -142,7 +142,12 @@ export class InvitacionesComponent {
       }
 
       if (res.token) {
-        const generatedLink = `${this.frontBaseUrl}/#/register?token=${res.token}`;
+        const base = this.frontBaseUrl
+          .trim()
+          .replace(/\/+$/, '')   // quita / final
+          .replace(/#\/?$/, ''); // quita # o #/
+
+        const generatedLink = `${base}/#/register?token=${res.token}`;
         this.generatedLink = generatedLink;
         const numeroSinEspacios = payload.telefono.replace(/\s/g, '');
         const textoPlano = [

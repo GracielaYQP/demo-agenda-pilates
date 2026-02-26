@@ -1,7 +1,7 @@
 // desarrollo
 export const environment = {
   production: false,
-  apiUrl: 'https://api.luciacarlettapilates.com', 
+  apiUrl: 'https://api.agendapilates.thysetech.com', 
   frontBaseUrl: 'http://localhost:4200'
 };
 

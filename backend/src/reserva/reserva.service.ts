@@ -222,7 +222,7 @@ export class ReservaService {
     // =========================================================
 
     // ✅ AUTOMÁTICA (solo alumno)
-    if (tipo === 'automatica' && !esAdmin) {
+    if (tipo === 'automatica') {
       const { actuales, maximas } = await this.contarTotalClasesDelCiclo(userId, ft);
       if (actuales >= maximas) {
         throw new BadRequestException(
@@ -530,15 +530,20 @@ export class ReservaService {
   async contarReservasAutomaticasDeLaSemana(
     userId: number,
     fechaTurno: string,
-  ): Promise<{ actuales: number; maximas: number }> {
+  ): Promise<{ actuales: number; maximas: number; desde: string; hasta: string }> {
     const usuario = await this.userRepo.findOne({ where: { id: userId } });
     if (!usuario) throw new Error('Usuario no encontrado');
 
     const planMensual = parseInt(usuario.planMensual ?? '4', 10);
-    const maximas = Math.floor(planMensual / 4); // 4->1, 8->2, 12->3
+    const maximas = Math.floor(planMensual / 4);
+    
+    const ymd = String(fechaTurno || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+      console.log('DEBUG FECHA INVALIDA', { fechaTurno, ymd });
+      return { actuales: 9999, maximas, desde: 'INVALID', hasta: 'INVALID' }; // o throw
+    }
 
-    // ✅ Parse AR “seguro” (mediodía) para no caer en día anterior por UTC
-    const fecha = new Date(`${fechaTurno}T12:00:00-03:00`);
+    const fecha = new Date(`${ymd}T12:00:00-03:00`);
 
     const day = fecha.getDay(); // 0 dom .. 6 sáb (en horario local)
     const delta = (day === 0 ? -6 : 1 - day); // domingo -> -6, lunes -> 0
@@ -566,7 +571,7 @@ export class ReservaService {
 
     console.log('DEBUG COUNT', actuales);
 
-    return { actuales, maximas };
+    return { actuales, maximas, desde, hasta };
   }
 
   async cancelarReservaPorUsuario(

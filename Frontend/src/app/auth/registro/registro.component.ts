@@ -69,7 +69,7 @@ export class RegistroComponent implements OnInit, OnDestroy {
     //    Si invitación ⇒ validar token y completar nivel/teléfono (siguen deshabilitados)
     //    Si visitante sin token ⇒ mostrar modal de no invitación
     if (this.isAdmin) {
-      this.invitacionValida = true; // fuerza flujo OK para admin
+      this.invitacionValida = true; 
       this.form.get('nivel')!.enable({ emitEvent: false });
       this.form.get('telefono')!.enable({ emitEvent: false });
     } else if (this.esInvitacion && token) {
@@ -124,8 +124,8 @@ export class RegistroComponent implements OnInit, OnDestroy {
       nombre: ['', [Validators.required, Validators.pattern(/^([a-zA-ZáéíóúüÁÉÍÓÚÜñÑ\s]{3,})$/)]],
       apellido: ['', [Validators.required, Validators.pattern(/^([a-zA-ZáéíóúüÁÉÍÓÚÜñÑ\s]{3,})$/)]],
       planMensual: ['0', Validators.required],       // 0 = suelta/prueba
-      nivel: [{ value: '', disabled: true }],         // habilito luego si admin
-      telefono: [{ value: '', disabled: true }],      // habilito luego si admin
+      nivel: [{ value: '', disabled: true }, Validators.required],
+      telefono: [{ value: '', disabled: true }, Validators.required],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [
         Validators.required,

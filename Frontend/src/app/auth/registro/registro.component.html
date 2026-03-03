@@ -54,12 +54,14 @@
           </p>
         </div>
 
-        <!-- Si hay invitación, mostrar solo valor precargado de nivel -->
-        <div class="form-group" *ngIf="invitacionValida && !isAdminInvite; else nivelManual">
-          <label for="nivel">Nivel asignado:</label>
-          <input id="nivel" type="text" [value]="nivel" readonly />
+        <!-- SOLO si viene por invitación: nivel preasignado (readonly) -->
+        <div class="form-group"
+            *ngIf="esInvitacion && invitacionValida && !isAdminInvite; else nivelManual">
+          <label for="nivel_asignado">Nivel asignado:</label>
+          <input id="nivel_asignado" type="text" [value]="nivel" readonly />
         </div>
-        <!-- Si NO hay invitación o es admin, mostrar campo editable de nivel -->
+
+        <!-- Si NO es invitación (admin/superadmin manual) => SELECT -->
         <ng-template #nivelManual>
           <div class="form-group" *ngIf="!isAdminInvite">
             <label for="nivel">Nivel:</label>
@@ -69,16 +71,17 @@
               <option value="Intermedio">Intermedio</option>
               <option value="Avanzado">Avanzado</option>
             </select>
+
             <p class="text-danger" *ngIf="form.get('nivel')?.touched && form.get('nivel')?.invalid">
               El nivel es requerido.
             </p>
           </div>
         </ng-template>
 
-                <!-- Si hay invitación, mostrar solo valor precargado de telefono -->
+       <!-- Si hay invitación, mostrar solo valor precargado de telefono -->
         <div class="form-group" *ngIf="esInvitacion; else telefonoManual">
           <label for="telefono">Teléfono:</label>
-          <input id="telefono" type="text" [value]="telefono" readonly />
+          <input id="telefono_asignado" type="text" [value]="telefono" readonly />
         </div>
         <!-- Si NO hay invitación o es admin, mostrar campo editable de telefono -->
         <ng-template #telefonoManual>

@@ -483,19 +483,9 @@ export class ReservaService {
     return { mensaje: '✅ Reserva cancelada por esta vez.' };
   }
 
-  private ymdFromDateAR(d: Date) {
-    const parts = new Intl.DateTimeFormat('sv-SE', {
-      timeZone: 'America/Argentina/Buenos_Aires',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-    }).formatToParts(d);
-
-    const get = (t: string) => parts.find(p => p.type === t)?.value ?? '00';
-    return `${get('year')}-${get('month')}-${get('day')}`;
-  }
-
   private ymdStartOfMonthAR(refYMD: string) {
     const d = new Date(`${refYMD}T00:00:00-03:00`);
-    d.setDate(1);
+    d.setDate(1); // primer día del mes
     return this.ymdFromDateAR(d);
   }
 
@@ -530,6 +520,13 @@ export class ReservaService {
     };
   }
 
+  private ymdFromDateAR(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   async contarReservasAutomaticasDeLaSemana(
     userId: number,
     fechaTurno: string,
@@ -551,6 +548,13 @@ export class ReservaService {
     const desde = this.ymdFromDateAR(primerDiaSemana);
     const hasta = this.ymdFromDateAR(ultimoDiaSemana);
 
+    console.log('DEBUG SEMANA', {
+      userId,
+      fechaTurno,
+      desde,
+      hasta,
+    });
+
     const actuales = await this.reservaRepo.count({
       where: {
         usuario: { id: userId },
@@ -561,7 +565,7 @@ export class ReservaService {
       },
     });
 
-
+    console.log('DEBUG COUNT', actuales);
     return {
       actuales,
       maximas: clasesMaximasPorSemana,

@@ -535,25 +535,24 @@ export class ReservaService {
     if (!usuario) throw new Error('Usuario no encontrado');
 
     const planMensual = parseInt(usuario.planMensual ?? '4', 10);
-    const clasesMaximasPorSemana = Math.floor(planMensual / 4);
+    const maximas = Math.floor(planMensual / 4); // 4->1, 8->2, 12->3
 
+    // ✅ Parse AR “seguro” (mediodía) para no caer en día anterior por UTC
     const fecha = new Date(`${fechaTurno}T12:00:00-03:00`);
 
-    const primerDiaSemana = new Date(fecha);
-    primerDiaSemana.setDate(fecha.getDate() - fecha.getDay() + 1); // Lunes
+    const day = fecha.getDay(); // 0 dom .. 6 sáb (en horario local)
+    const delta = (day === 0 ? -6 : 1 - day); // domingo -> -6, lunes -> 0
+    const lunes = new Date(fecha);
+    lunes.setDate(fecha.getDate() + delta);
 
-    const ultimoDiaSemana = new Date(primerDiaSemana);
-    ultimoDiaSemana.setDate(primerDiaSemana.getDate() + 6); // Domingo
+    const domingo = new Date(lunes);
+    domingo.setDate(lunes.getDate() + 6);
 
-    const desde = this.ymdFromDateAR(primerDiaSemana);
-    const hasta = this.ymdFromDateAR(ultimoDiaSemana);
+    const desde = this.ymdFromDateAR(lunes);
+    const hasta = this.ymdFromDateAR(domingo);
 
-    console.log('DEBUG SEMANA', {
-      userId,
-      fechaTurno,
-      desde,
-      hasta,
-    });
+    // ✅ DEBUG (dejalo un rato)
+    console.log('DEBUG SEMANA', { userId, fechaTurno, desde, hasta });
 
     const actuales = await this.reservaRepo.count({
       where: {
@@ -566,10 +565,8 @@ export class ReservaService {
     });
 
     console.log('DEBUG COUNT', actuales);
-    return {
-      actuales,
-      maximas: clasesMaximasPorSemana,
-    };
+
+    return { actuales, maximas };
   }
 
   async cancelarReservaPorUsuario(

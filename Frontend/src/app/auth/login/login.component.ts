@@ -71,24 +71,47 @@ export class LoginComponent implements OnInit, OnDestroy, AfterViewInit{
 
   submit() {
     if (this.form.invalid) return;
+
     console.log('🔐 Enviando datos de login:', this.form.value);
+
     this.auth.login(this.form.value).subscribe({
-      next: (res) => {
-         console.log('✅ Respuesta del login:', res);
-        // Guardar el token y el nombre
-        localStorage.setItem('token', res.access_token);
-        localStorage.setItem('nombreUsuario', res.nombre);
-        localStorage.setItem('nivelUsuario', res.nivel);
-        localStorage.setItem('rol', res.rol); 
-        this.router.navigate(['/gestion-turnos']);
+      next: (res: any) => {
+        console.log('✅ Respuesta del login:', res);
+        console.log('rol directo:', res?.rol);
+        console.log('rol en user:', res?.user?.rol);
+        console.log('role alternativo:', res?.role);
+
+        const token = res?.access_token ?? res?.token;
+        if (token) localStorage.setItem('token', token);
+
+        const rol = (res?.rol ?? res?.user?.rol ?? res?.role ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+
+        if (rol) localStorage.setItem('rol', rol);
+
+        const nombre = (res?.nombre ?? res?.user?.nombre ?? '').toString().trim();
+        const nivel = (res?.nivel ?? res?.user?.nivel ?? '').toString().trim();
+
+        if (nombre) localStorage.setItem('nombreUsuario', nombre);
+        if (nivel) localStorage.setItem('nivelUsuario', nivel);
+
+        console.log('LS rol guardado (después):', localStorage.getItem('rol'));
+
+        // navegar según rol (recomendado)
+        if (rol === 'admin' || rol === 'superadmin') {
+          this.router.navigate(['/gestion-turnos']);
+        } else {
+          this.router.navigate(['/horarios-disponibles']);
+        }
       },
       error: (err) => {
         console.log('❌ Error al iniciar sesión:', err);
         this.error = err.error?.message || 'Error desconocido al iniciar sesión';
         this.showInviteHint = true;
-        // Error: limpiar y volver a enfocar para reintentar rápido
         this.form.reset();
-        this.focusUsuario(); 
+        this.focusUsuario();
       }
     });
   }

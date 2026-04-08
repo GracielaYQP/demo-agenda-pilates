@@ -384,7 +384,7 @@ export class GestionTurnosComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.rolUsuario === 'admin') {
+    if (this.rolUsuario === 'admin' || this.rolUsuario === 'superadmin') {
       this.abrirEditorDeReservas(this.turnoSeleccionado);
       return;
     }
@@ -805,15 +805,17 @@ export class GestionTurnosComponent implements OnInit, OnDestroy {
     if (this.estadoCierre(diaConFecha, hora) !== 'ninguno') return [];
 
     const [dia, fechaDDMMYYYY] = diaConFecha.split(' ');
-    const nivelUsuario = (this.usuarioNivel || '').toLowerCase();
+    const nivelUsuario = (this.usuarioNivel || '').toLowerCase().trim();
+    const rol = (this.rolUsuario || '').toLowerCase().trim();
+    const esAdmin = rol === 'admin' || rol === 'superadmin';
 
     return (this.horarios || []).filter(h =>
       h.dia === dia &&
       this.formatearFecha(h.fecha) === fechaDDMMYYYY &&
       h.hora === hora &&
       (
-        this.rolUsuario === 'admin' ||
-        ((h.nivel || '').toLowerCase() === nivelUsuario)
+        esAdmin ||
+        ((h.nivel || '').toLowerCase().trim() === nivelUsuario)
       )
     );
   }

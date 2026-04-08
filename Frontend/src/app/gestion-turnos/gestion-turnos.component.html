@@ -67,7 +67,7 @@
                   <div class="reservas" *ngIf="turno.reservas?.length > 0">
                     <div *ngFor="let r of turno.reservas">
                       <ng-container
-                        *ngIf="esReservaVisibleEnCelda(r, turno) && (rolUsuario === 'admin' || turno.nivel.toLowerCase() === usuarioNivel.toLowerCase())"
+                        (rolUsuario === 'admin' || rolUsuario === 'superadmin' || turno.nivel.toLowerCase() === usuarioNivel.toLowerCase())
                       >
                         <span
                           class="reserva-item"
@@ -90,7 +90,7 @@
 
                   <!-- ✅ Solo admin: controles de bloqueo -->
                   <div
-                    *ngIf="rolUsuario === 'admin'"
+                    *ngIf="rolUsuario === 'admin' || rolUsuario === 'superadmin'"
                     class="bloqueo-controls"
                     style="margin-top:6px; display:flex; gap:8px; align-items:center; justify-content:center;"
                   >

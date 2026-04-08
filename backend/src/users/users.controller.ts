@@ -32,6 +32,8 @@ export class UsersController {
         return this.usersService.obtenerListadoUsuarios();
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @Patch("/modificarUsuario/:id")
   update(@Param('id') id: string, @Body() body: any) {
     const userId = parseInt(id, 10);
@@ -51,11 +53,15 @@ export class UsersController {
     return this.usersService.update(userId, dataFiltrada);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @Patch('/inactivar/:id')
     inactivarUsuario(@Param('id') id: number) {
       return this.usersService.inactivarUsuario(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @Get('buscar')
   async buscarPorNombreYApellido(
     @Query('nombre') nombre: string,
@@ -86,11 +92,15 @@ export class UsersController {
     }
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @Get('/:id')
     async findById(@Param('id') id: number) {
     return this.usersService.findById(id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @Get('telefono/:telefono')
   async buscarPorTelefono(@Param('telefono') telefono: string) {
     const user = await this.userRepository.findOneBy({ telefono });
@@ -98,6 +108,8 @@ export class UsersController {
     return user;
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @Patch('reactivar/:id')
   async reactivarUsuario(@Param('id') id: number) {
     return this.usersService.actualizarEstado(id, true); // true = activar

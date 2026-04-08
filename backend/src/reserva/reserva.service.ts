@@ -72,7 +72,7 @@ export class ReservaService {
     const usuario = await this.userRepo.findOne({ where: { id: userId } });
     if (!usuario) throw new Error('Usuario no encontrado');
 
-    const esAdmin = (rol ?? '').toLowerCase() === 'admin';
+    const esAdmin = this.esRolAdmin(rol);
     const ft = String(fechaTurno || '').slice(0, 10);
 
     // 🚦 Validar vigencia de plan (NO aplica a clases sueltas)
@@ -117,7 +117,7 @@ export class ReservaService {
     });
 
     // =========================================================
-    // 1) MANEJO DE EXISTENTE (acá resolvemos tu caso)
+    // 1) MANEJO DE EXISTENTE
     // =========================================================
     if (existente) {
       // 🔴 Ya hay una reserva activa
@@ -126,11 +126,83 @@ export class ReservaService {
       }
 
       // 🔴 Está cancelada
+      // if (existente.estado === 'cancelado') {
+      //   // ✅ Caso: canceló momentáneamente ESTE MISMO TURNO
+      //   // y ahora quiere volver (elige RECUPERACIÓN)
+      //   if (existente.cancelacionMomentanea && tipo === 'recuperacion') {
+      //     // 1) validar cupo
+      //     const ocupadas = await this.reservaRepo.count({
+      //       where: { horario: { id: horarioId }, fechaTurno: ft, estado: 'reservado' },
+      //     });
+
+      //     const total = Number(horario.totalReformers || 0);
+      //     const bloqueados = Math.max(0, Number((horario as any).blockedReformers || 0));
+
+      //     const libresTeoricos = Math.max(0, total - ocupadas);
+      //     const bloqueadosAplicados = Math.min(bloqueados, libresTeoricos);
+      //     const libresEfectivos = libresTeoricos - bloqueadosAplicados;
+
+      //     if (libresEfectivos <= 0) {
+      //       throw new BadRequestException('No hay reformers disponibles para volver a tomar tu lugar.');
+      //     }
+
+      //     // 2) Reglas de tiempo
+      //     const hora = String(horario.hora || '00:00').slice(0, 5);
+      //     const fechaHoraTurno = new Date(`${ft}T${hora}:00-03:00`);
+      //     const ahora = new Date(
+      //       new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }),
+      //     );
+      //     const diffMin = (fechaHoraTurno.getTime() - ahora.getTime()) / (1000 * 60);
+
+      //     // Nadie puede reactivar si ya empezó/pasó la clase
+      //     if (diffMin <= 0) {
+      //       throw new BadRequestException(
+      //         'No se puede volver a tomar el lugar de una clase ya iniciada o pasada.',
+      //       );
+      //     }
+
+      //     // Alumno: mínimo 1 hora antes
+      //     if (!esAdmin && diffMin < 60) {
+      //       throw new BadRequestException(
+      //         'Para volver a tomar tu lugar, debe ser al menos 1 hora antes del inicio de la clase.',
+      //       );
+      //     }
+
+      //     // ✅ Reactivar la MISMA fila
+      //     existente.estado = 'reservado';
+      //     existente.tipo = 'automatica';
+      //     existente.automatica = true;
+      //     existente.cancelacionMomentanea = false;
+      //     existente.cancelacionPermanente = false;
+      //     (existente as any).fechaCancelacion = null;
+
+      //     const guardada = await this.reservaRepo.save(existente);
+
+      //     return {
+      //       ...guardada,
+      //       aviso: 'Vemos que cancelaste este mismo turno hoy. Si confirmás como Recuperación, volverás a tomar tu lugar.',
+      //       reversionCancelacion: true,
+      //     } as any;
+      //   }
+
+      //   // ❌ Si está cancelada momentáneamente y NO es recuperación, bloqueamos automática
+      //   if (existente.cancelacionMomentanea && tipo === 'automatica') {
+      //     throw new BadRequestException(
+      //       'Ese día ya lo cancelaste por única vez para generar recuperación. No se puede volver a reservar automáticamente.',
+      //     );
+      //   }
+
+      //   // ✅ Si fue cancelación permanente (o “rara”), borramos para permitir crear una nueva
+      //   await this.reservaRepo.remove(existente);
+      // }
+
       if (existente.estado === 'cancelado') {
-        // ✅ Caso: canceló momentáneamente ESTE MISMO TURNO
-        // y ahora quiere volver (elige RECUPERACIÓN)
+        // Si viene como automática pero en realidad está revirtiendo una cancelación momentánea
+        if (existente.cancelacionMomentanea && tipo === 'automatica') {
+          tipo = 'recuperacion';
+        }
+
         if (existente.cancelacionMomentanea && tipo === 'recuperacion') {
-          // 1) validar cupo (por si alguien ocupó su lugar)
           const ocupadas = await this.reservaRepo.count({
             where: { horario: { id: horarioId }, fechaTurno: ft, estado: 'reservado' },
           });
@@ -146,61 +218,49 @@ export class ReservaService {
             throw new BadRequestException('No hay reformers disponibles para volver a tomar tu lugar.');
           }
 
-          // 2) Regla 1 hora (solo alumno)
-          if (!esAdmin) {
-            const ahora = new Date(
-              new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }),
-            );
-            const hora = String(horario.hora || '00:00').slice(0, 5);
-            const fechaHoraTurno = new Date(`${ft}T${hora}:00-03:00`);
-            const diffMin = (fechaHoraTurno.getTime() - ahora.getTime()) / (1000 * 60);
+          const hora = String(horario.hora || '00:00').slice(0, 5);
+          const fechaHoraTurno = new Date(`${ft}T${hora}:00-03:00`);
+          const ahora = new Date(
+            new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }),
+          );
+          const diffMin = (fechaHoraTurno.getTime() - ahora.getTime()) / (1000 * 60);
 
-            if (diffMin < 60) {
-              throw new BadRequestException(
-                'Para volver a tomar tu lugar, debe ser al menos 1 hora antes del inicio de la clase.',
-              );
-            }
+          // nadie después de empezada
+          if (diffMin <= 0) {
+            throw new BadRequestException(
+              'No se puede volver a tomar el lugar de una clase ya iniciada o pasada.',
+            );
           }
 
-          // ✅ Reactivar la MISMA fila (no crear otra, no borrar)
-          existente.estado = 'reservado';
+          // alumno: mínimo 1 hora antes
+          if (!esAdmin && diffMin < 60) {
+            throw new BadRequestException(
+              'Para volver a tomar tu lugar, debe ser al menos 1 hora antes del inicio de la clase.',
+            );
+          }
 
-          // 🔥 Recomendación: vuelve a ser "automática", porque volvió a su lugar habitual.
-          // (así no “consume” recuperaciones ni genera confusión)
+          existente.estado = 'reservado';
           existente.tipo = 'automatica';
           existente.automatica = true;
-
           existente.cancelacionMomentanea = false;
           existente.cancelacionPermanente = false;
           (existente as any).fechaCancelacion = null;
-
-          // opcional: guardar auditoría de "reactivación"
-          // existente.fechaReserva = this.ymdTodayAR();
 
           const guardada = await this.reservaRepo.save(existente);
 
           return {
             ...guardada,
-            aviso: 'Vemos que cancelaste este mismo turno hoy. Si confirmás como Recuperación, volverás a tomar tu lugar.',
+            aviso: 'La cancelación fue revertida y el lugar volvió a quedar reservado.',
             reversionCancelacion: true,
           } as any;
         }
 
-        // ❌ Si está cancelada momentáneamente y NO es recuperación, bloqueamos automática
-        if (existente.cancelacionMomentanea && tipo === 'automatica') {
-          throw new BadRequestException(
-            'Ese día ya lo cancelaste por única vez para generar recuperación. No se puede volver a reservar automáticamente.',
-          );
-        }
-
-        // ✅ Si fue cancelación permanente (o “rara”), borramos para permitir crear una nueva
-        // (acá sí tiene sentido el remove)
         await this.reservaRepo.remove(existente);
       }
     }
 
     // =========================================================
-    // 2) Chequeo de cupo (para reservas nuevas)
+    // 2) Chequeo de cupo
     // =========================================================
     const ocupadas = await this.reservaRepo.count({
       where: { horario: { id: horarioId }, fechaTurno: ft, estado: 'reservado' },
@@ -221,36 +281,54 @@ export class ReservaService {
     // 3) Validaciones por tipo
     // =========================================================
 
-    // ✅ AUTOMÁTICA (solo alumno)
+    // ✅ AUTOMÁTICA
     if (tipo === 'automatica') {
-      const { actuales, maximas } = await this.contarTotalClasesDelCiclo(userId, ft);
-      if (actuales >= maximas) {
+      const planMensual = parseInt(usuario.planMensual ?? '4', 10);
+      const maxSemanales = Math.floor(planMensual / 4); // 4->1, 8->2, 12->3
+
+      if (!Number.isFinite(maxSemanales) || maxSemanales <= 0) {
         throw new BadRequestException(
-          `⚠️ Ya alcanzaste el límite de ${maximas} clases del ciclo (incluyendo recuperaciones).`,
+          'Este alumno no tiene plan activo para reservar turnos automáticos.'
         );
       }
 
-      const { actuales: semanales, maximas: maxSemanales } =
-        await this.contarReservasAutomaticasDeLaSemana(userId, ft);
+      const yaEsFijoEseHorario = await this.turnoFijoRepo.findOne({
+        where: { usuarioId: userId, horarioId: horarioId, activo: true } as any,
+        select: ['id'] as any,
+      });
 
-      if (semanales >= maxSemanales) {
-        throw new BadRequestException(
-          `⚠️Ya alcanzaste el límite semanal de ${maxSemanales} clases según tu plan.`,
-        );
+      if (!yaEsFijoEseHorario) {
+        const fijosActivos = await this.turnoFijoRepo.count({
+          where: { usuarioId: userId, activo: true } as any,
+        });
+
+        if (fijosActivos >= maxSemanales) {
+          throw new BadRequestException(
+            `⚠️ Ya alcanzaste el límite semanal de ${maxSemanales} turnos permanentes según tu plan.`
+          );
+        }
       }
     }
 
     // ✅ RECUPERACIÓN
     if (tipo === 'recuperacion') {
-      if (!cicloPlan) cicloPlan = await this.obtenerCicloPlanActualPorCantidad(userId, ft);
-      if (!cicloPlan) throw new BadRequestException('No tenés un ciclo activo para usar recuperaciones.');
-
-      if (cicloPlan.completo) {
-        throw new BadRequestException('El plan ya fue completado por cantidad. No hay recuperaciones en este ciclo.');
+      if (!cicloPlan && !esAdmin) {
+        cicloPlan = await this.obtenerCicloPlanActualPorCantidad(userId, ft);
       }
 
-      if (ft < cicloPlan.inicio || ft > cicloPlan.finVentana) {
-        throw new BadRequestException('La ventana de 30 días ya venció. No se pueden hacer recuperaciones.');
+      // Para alumno sí exigimos ciclo activo
+      if (!esAdmin) {
+        if (!cicloPlan) {
+          throw new BadRequestException('No tenés un ciclo activo para usar recuperaciones.');
+        }
+
+        if (cicloPlan.completo) {
+          throw new BadRequestException('El plan ya fue completado por cantidad. No hay recuperaciones en este ciclo.');
+        }
+
+        if (ft < cicloPlan.inicio || ft > cicloPlan.finVentana) {
+          throw new BadRequestException('La ventana de 30 días ya venció. No se pueden hacer recuperaciones.');
+        }
       }
 
       const cierreRecup = await this.ausenciaProfeService.hayCierre(ft, String(horario.hora).slice(0, 5));
@@ -258,29 +336,33 @@ export class ReservaService {
         throw new BadRequestException('No podés reservar una recuperación: el estudio está cerrado en esa fecha/horario.');
       }
 
-      if (this.turnoYaPaso(ft, String(horario.hora || '00:00').slice(0, 5))) {
-        throw new BadRequestException('No podés reservar una recuperación para un turno pasado.');
+      const horaTurno = String(horario.hora || '00:00').slice(0, 5);
+      const fechaHoraTurno = new Date(`${ft}T${horaTurno}:00-03:00`);
+      const ahora = new Date(
+        new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }),
+      );
+      const diffMin = (fechaHoraTurno.getTime() - ahora.getTime()) / (1000 * 60);
+
+      // 🔒 Nadie puede reservar si ya empezó/pasó
+      if (diffMin <= 0) {
+        throw new BadRequestException('No podés reservar una recuperación para un turno ya iniciado o pasado.');
       }
 
-      if (!esAdmin) {
-        const ahora = new Date(
-          new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }),
+      // 🔒 Alumno: 1 hora antes. Admin: sin esa restricción.
+      if (!esAdmin && diffMin < 60) {
+        throw new BadRequestException(
+          'Las reservas de recuperación deben hacerse al menos 1 hora antes del inicio de la clase.',
         );
-        const fechaHoraTurno = new Date(`${ft}T${String(horario.hora).slice(0, 5)}:00-03:00`);
-        const diffMin = (fechaHoraTurno.getTime() - ahora.getTime()) / (1000 * 60);
+      }
 
-        if (diffMin < 60) {
+      // 🔒 Alumno: debe tener recuperaciones disponibles. Admin: puede cargar igual.
+      if (!esAdmin) {
+        const recuperacionesDisponibles = await this.contarCancelacionesMomentaneasDelMes(userId, ft);
+        if (recuperacionesDisponibles <= 0) {
           throw new BadRequestException(
-            'Las reservas de recuperación deben hacerse al menos 1 hora antes del inicio de la clase.',
+            'No tenés recuperaciones disponibles: primero debe existir una cancelación momentánea o un cierre del estudio.',
           );
         }
-      }
-
-      const recuperacionesDisponibles = await this.contarCancelacionesMomentaneasDelMes(userId, ft);
-      if (recuperacionesDisponibles <= 0) {
-        throw new BadRequestException(
-          'No tenés recuperaciones disponibles: primero debe existir una cancelación momentánea o un cierre del estudio.',
-        );
       }
     }
 
@@ -318,7 +400,7 @@ export class ReservaService {
 
     // ✅ Si es turno habitual (automática), guardamos turno fijo
     if (tipo === 'automatica') {
-      await this.activarTurnoFijo(userId, horarioId);
+      await this.activarTurnoFijo(userId, horarioId, true);
     }
 
     return reservaGuardada;
@@ -333,6 +415,7 @@ export class ReservaService {
 
   async obtenerReservasPorUsuario(userId: number) {
     try {
+      console.log('🔍 BUSCANDO RESERVAS PARA userId =', userId);
       const reservas = await this.reservaRepo
         .createQueryBuilder('reserva')
         .leftJoinAndSelect('reserva.horario', 'horario')
@@ -343,6 +426,7 @@ export class ReservaService {
         .getMany();
 
       console.log('🎯 Reservas encontradas:', reservas);
+      console.log('🎯 Reservas encontradas para mis-turnos:', reservas.length);
       return reservas;
     } catch (error) {
       console.error('❌ Error al obtener reservas por usuario:', error);
@@ -483,9 +567,19 @@ export class ReservaService {
     return { mensaje: '✅ Reserva cancelada por esta vez.' };
   }
 
+  private ymdFromDateAR(d: Date) {
+    const parts = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(d);
+
+    const get = (t: string) => parts.find(p => p.type === t)?.value ?? '00';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+  }
+
   private ymdStartOfMonthAR(refYMD: string) {
     const d = new Date(`${refYMD}T00:00:00-03:00`);
-    d.setDate(1); // primer día del mes
+    d.setDate(1);
     return this.ymdFromDateAR(d);
   }
 
@@ -518,13 +612,6 @@ export class ReservaService {
       actuales,
       maximas: clasesMaximas,
     };
-  }
-
-  private ymdFromDateAR(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
   }
 
   async contarReservasAutomaticasDeLaSemana(
@@ -587,23 +674,32 @@ export class ReservaService {
     if (!reserva) throw new NotFoundException('Reserva no encontrada');
 
     const userId = user?.id ?? user?.sub;
-    const rol = (user?.rol ?? '').toLowerCase();
+    const esAdmin = this.esRolAdmin(user?.rol);
 
     // 🔐 Solo dueño o admin
-    if (!reserva.usuario || (reserva.usuario.id !== Number(userId) && rol !== 'admin')) {
+    if (!reserva.usuario || (reserva.usuario.id !== Number(userId) && !esAdmin)) {
       throw new ForbiddenException('No podés cancelar esta reserva');
     }
 
-    // ✅ Determinar tipo real (más confiable que automatica sola)
+    // ✅ Determinar tipo real
     const tipoReserva = String((reserva as any).tipo ?? '').toLowerCase();
 
-    // ⏱ Regla 2 horas (solo alumno)
+    // ⏱ Reglas de tiempo
     const ahora = new Date(
       new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }),
     );
-    const turno = new Date(`${reserva.fechaTurno}T${reserva.horario.hora}:00-03:00`);
-    const diffHs = (turno.getTime() - ahora.getTime()) / (1000 * 60 * 60);
-    if (rol !== 'admin' && diffHs < 2) {
+
+    const horaTurno = String(reserva.horario?.hora ?? '00:00').slice(0, 5);
+    const turno = new Date(`${reserva.fechaTurno}T${horaTurno}:00-03:00`);
+    const diffMin = (turno.getTime() - ahora.getTime()) / (1000 * 60);
+
+    // 🔒 Nadie puede cancelar una clase ya iniciada o pasada
+    if (diffMin <= 0) {
+      throw new BadRequestException('No se puede cancelar una clase ya iniciada o pasada.');
+    }
+
+    // 🔒 Solo alumno respeta las 2 horas
+    if (!esAdmin && diffMin < 120) {
       throw new BadRequestException('Solo se puede cancelar hasta 2 horas antes del turno.');
     }
 
@@ -629,24 +725,20 @@ export class ReservaService {
 
     // ✅ 3) AUTOMÁTICA → se marca (no se borra)
 
-    // ✅ Reset SIEMPRE flags (evita que queden “pegados”)
     reserva.cancelacionMomentanea = false;
     reserva.cancelacionPermanente = false;
 
-    // ⛔️ Si cae en cierre → marcar como CERRADO (NO "cancelado")
     const cierre = await this.ausenciaProfeService.hayCierre(
       reserva.fechaTurno,
       reserva.horario.hora,
     );
 
     if (cierre) {
-      // ✅ cierre = crédito de recuperación
       reserva.estado = 'cerrado';
-      reserva.cancelacionMomentanea = true; // cuenta como “ganada”
+      reserva.cancelacionMomentanea = true;
       reserva.cancelacionPermanente = false;
       reserva.fechaCancelacion = new Date();
 
-      // libera cama si estaba contada
       if (reserva.horario) {
         reserva.horario.reformersReservados = Math.max(0, reserva.horario.reformersReservados - 1);
         await this.horarioRepo.save(reserva.horario);
@@ -659,7 +751,6 @@ export class ReservaService {
       };
     }
 
-    // ✅ Caso normal: cancelación del alumno
     reserva.estado = 'cancelado';
     reserva.fechaCancelacion = new Date();
 
@@ -667,12 +758,14 @@ export class ReservaService {
       reserva.cancelacionMomentanea = true;
     } else {
       reserva.cancelacionPermanente = true;
-      // ✅ Baja del turno fijo SOLO si es automática habitual
-      // (no aplica a recuperaciones ni sueltas, que ya se borran físicamente arriba)
-      if (tipoReserva === 'automatica' || reserva.automatica === true) {
-        await this.desactivarTurnoFijo(reserva.usuario.id, reserva.horario.id, 'cancelacion_permanente');
-      }
 
+      if (tipoReserva === 'automatica' || reserva.automatica === true) {
+        await this.desactivarTurnoFijo(
+          reserva.usuario.id,
+          reserva.horario.id,
+          'cancelacion_permanente',
+        );
+      }
     }
 
     if (reserva.horario) {
@@ -1166,64 +1259,64 @@ export class ReservaService {
     // Regla: se manda cuando el alumno toma la PRIMERA clase del ciclo nuevo
     // (cronológicamente, es la clase "planMax + 1")
     // =========================================================
-    try {
-      if (usuario.telefono && actuales >=1) {
-        // ciclo anterior = el ciclo que estaba vigente el día anterior al inicio del ciclo actual
-        const refPrev = this.ymdAddDays(ciclo.inicio, -1);
-        const cicloAnterior = await this.obtenerCicloPlanActualPorCantidad(userId, refPrev);
+    // try {
+    //   if (usuario.telefono && actuales >=1) {
+    //     // ciclo anterior = el ciclo que estaba vigente el día anterior al inicio del ciclo actual
+    //     const refPrev = this.ymdAddDays(ciclo.inicio, -1);
+    //     const cicloAnterior = await this.obtenerCicloPlanActualPorCantidad(userId, refPrev);
 
-        // Solo si el ciclo anterior existía y se COMPLETÓ por cantidad
-        if (cicloAnterior?.completo) {
-          // ✅ Si ya existe pago del ciclo NUEVO, NO mandar plan vencido
-          const pagoCicloNuevo = await this.pagosRepo.findOne({
-            where: {
-              userId: userId,
-              cicloInicio: ciclo.inicio,
-              cicloFin: ciclo.finVentana,
-            },
-            select: ['id', 'fechaPago'],
-          });
+    //     // Solo si el ciclo anterior existía y se COMPLETÓ por cantidad
+    //     if (cicloAnterior?.completo) {
+    //       // ✅ Si ya existe pago del ciclo NUEVO, NO mandar plan vencido
+    //       const pagoCicloNuevo = await this.pagosRepo.findOne({
+    //         where: {
+    //           userId: userId,
+    //           cicloInicio: ciclo.inicio,
+    //           cicloFin: ciclo.finVentana,
+    //         },
+    //         select: ['id', 'fechaPago'],
+    //       });
 
-          // ✅ Si NO pagó el ciclo nuevo, recién ahí evaluamos dedupe + envío
-          if (!pagoCicloNuevo?.fechaPago) {
-            const yaAvisadoVencido = await this.notifRepo.findOne({
-              where: {
-                usuarioId: userId,
-                tipo: 'plan_vencido',
-                // dedupe por el ciclo NUEVO (porque es cuando se "debe")
-                cicloInicio: ciclo.inicio,
-                cicloFin: ciclo.finVentana,
-              },
-            });
+    //       // ✅ Si NO pagó el ciclo nuevo, recién ahí evaluamos dedupe + envío
+    //       if (!pagoCicloNuevo?.fechaPago) {
+    //         const yaAvisadoVencido = await this.notifRepo.findOne({
+    //           where: {
+    //             usuarioId: userId,
+    //             tipo: 'plan_vencido',
+    //             // dedupe por el ciclo NUEVO (porque es cuando se "debe")
+    //             cicloInicio: ciclo.inicio,
+    //             cicloFin: ciclo.finVentana,
+    //           },
+    //         });
 
-            if (!yaAvisadoVencido) {
-              await this.whatsappService.sendTemplatePlanVencido(
-                usuario.telefono,
-                usuario.nombre,
-                planType,
-              );
+    //         if (!yaAvisadoVencido) {
+    //           await this.whatsappService.sendTemplatePlanVencido(
+    //             usuario.telefono,
+    //             usuario.nombre,
+    //             planType,
+    //           );
 
-              try {
-                await this.notifRepo.insert({
-                  usuarioId: userId,
-                  tipo: 'plan_vencido',
-                  cicloInicio: ciclo.inicio,
-                  cicloFin: ciclo.finVentana,
-                });
-              } catch {
-                // condición de carrera: ya insertado
-              }
+    //           try {
+    //             await this.notifRepo.insert({
+    //               usuarioId: userId,
+    //               tipo: 'plan_vencido',
+    //               cicloInicio: ciclo.inicio,
+    //               cicloFin: ciclo.finVentana,
+    //             });
+    //           } catch {
+    //             // condición de carrera: ya insertado
+    //           }
 
-              console.log(
-                `⚠️ Aviso de PLAN VENCIDO enviado a ${usuario.nombre} (${usuario.telefono}) [${planType}]`,
-              );
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.error('❌ Error al enviar aviso de plan vencido:', e);
-    }
+    //           console.log(
+    //             `⚠️ Aviso de PLAN VENCIDO enviado a ${usuario.nombre} (${usuario.telefono}) [${planType}]`,
+    //           );
+    //         }
+    //       }
+    //     }
+    //   }
+    // } catch (e) {
+    //   console.error('❌ Error al enviar aviso de plan vencido:', e);
+    // }
   }
 
   @Cron('*/30 * * * *', { timeZone: 'America/Argentina/Buenos_Aires' }) // notifica revisando cada 30 minutos
@@ -1320,6 +1413,11 @@ export class ReservaService {
     const m = String(ahoraAR.getMonth() + 1).padStart(2, '0');
     const d = String(ahoraAR.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
+  }
+
+  private esRolAdmin(rol?: string): boolean {
+    const r = String(rol ?? '').trim().toLowerCase();
+    return r === 'admin'|| r === 'superadmin';
   }
 
   public async getCicloPlanActual(userId: number, refYMD: string) {
@@ -2215,15 +2313,7 @@ export class ReservaService {
     return { ok: true, fechaTurno: fecha, hora, reservaId: r.id };
   }
 
-  private lunesSemanaAR(ymd: string): string {
-    const d = new Date(`${ymd}T00:00:00-03:00`);
-    const day = d.getDay(); // 0 dom .. 6 sab
-    const diffToMonday = (day + 6) % 7;
-    d.setDate(d.getDate() - diffToMonday);
-    return this.ymdFromDateAR(d); // ✅ AR, no UTC
-  }
-
-  async reenviarPlanVencidoSemanalSiCorresponde(userId: number, refFecha: string): Promise<BackfillResult> {
+  async reenviarPlanVencidoSiCorresponde(userId: number, refFecha: string): Promise<BackfillResult> {
     const usuario = await this.userRepo.findOne({ where: { id: userId } });
     if (!usuario) return { ok: false, userId, reason: 'usuario_no_encontrado' };
     if (!usuario.telefono) return { ok: false, userId, reason: 'sin_telefono' };
@@ -2236,79 +2326,98 @@ export class ReservaService {
     if (!ciclo) return { ok: false, userId, reason: 'sin_ciclo' };
 
     const inicioPaso = await this.inicioDeCicloYaPasoQB(userId, ciclo.inicio);
-    if (!inicioPaso.ok) return { ok: false, userId, reason: `ciclo_no_iniciado_${inicioPaso.reason}` };
+    if (!inicioPaso.ok) {
+      return { ok: false, userId, reason: `ciclo_no_iniciado_${inicioPaso.reason}` };
+    }
 
     const refPrev = this.ymdAddDays(ciclo.inicio, -1);
     const cicloAnterior = await this.obtenerCicloPlanActualPorCantidad(userId, refPrev);
-    if (!cicloAnterior?.completo) return { ok: false, userId, reason: 'ciclo_anterior_no_completo' };
+    if (!cicloAnterior?.completo) {
+      return { ok: false, userId, reason: 'ciclo_anterior_no_completo' };
+    }
+
+    // ✅ El "ciclo nuevo" a cobrar NO es el ciclo actual ni finVentana:
+    //    arranca en la próxima fecha habitual del alumno después del fin efectivo del ciclo actual.
+    const finBaseNuevoCiclo = ciclo.completo
+      ? (ciclo.finReal || ciclo.finVentana)
+      : ciclo.finVentana;
+
+    if (!finBaseNuevoCiclo) {
+      return { ok: false, userId, reason: 'sin_fin_base_nuevo_ciclo' };
+    }
+
+    const proximoInicio = await this.proximaFechaTurnoFijoDespuesDe(userId, finBaseNuevoCiclo);
+    if (!proximoInicio) {
+      return { ok: false, userId, reason: 'sin_proxima_fecha_habitual' };
+    }
+
+    const proximoFin = this.ymdAddDays(proximoInicio, 29);
 
     const pagoCicloNuevo = await this.pagosRepo.findOne({
-      where: { userId, cicloInicio: ciclo.inicio, cicloFin: ciclo.finVentana },
+      where: {
+        userId,
+        cicloInicio: proximoInicio,
+        cicloFin: proximoFin,
+      },
       select: ['id', 'fechaPago'],
     });
-    if (pagoCicloNuevo?.fechaPago) return { ok: false, userId, reason: 'ya_pago_ciclo' };
 
-    // ✅ dedupe semanal
-    const semanaInicio = this.lunesSemanaAR(refFecha);
+    if (pagoCicloNuevo?.fechaPago) {
+      return { ok: false, userId, reason: 'ya_pago_ciclo' };
+    }
 
-    const yaAvisadoSemana = await this.notifRepo.findOne({
+    // ✅ dedupe diario sobre el ciclo NUEVO real
+    const yaAvisadoHoy = await this.notifRepo.findOne({
       where: {
         usuarioId: userId,
         tipo: 'plan_vencido',
-        cicloInicio: ciclo.inicio,
-        cicloFin: ciclo.finVentana,
-        semanaInicio: semanaInicio,
+        cicloInicio: proximoInicio,
+        cicloFin: proximoFin,
+        fechaAviso: refFecha,
       } as any,
       select: ['id'],
     });
-    if (yaAvisadoSemana) return { ok: false, userId, reason: 'ya_avisado_semana' };
+
+    if (yaAvisadoHoy) {
+      return { ok: false, userId, reason: 'ya_avisado_hoy' };
+    }
 
     const planType = `${usuario.planMensual} clases / mes`;
-    await this.whatsappService.sendTemplatePlanVencido(usuario.telefono, usuario.nombre, planType);
+    await this.whatsappService.sendTemplatePlanVencido(
+      usuario.telefono,
+      usuario.nombre,
+      planType,
+    );
 
     try {
       await this.notifRepo.insert({
         usuarioId: userId,
         tipo: 'plan_vencido',
-        cicloInicio: ciclo.inicio,
-        cicloFin: ciclo.finVentana,
-        semanaInicio: semanaInicio,
+        cicloInicio: proximoInicio,
+        cicloFin: proximoFin,
+        fechaAviso: refFecha,
       } as any);
-    } catch {}
-
-    return { ok: true, userId, cicloInicio: ciclo.inicio, cicloFin: ciclo.finVentana };
-  }
-
-  @Cron('0 10 * * 1', { timeZone: 'America/Argentina/Buenos_Aires' })
-  async cronAvisoPlanVencidoSemanal() {
-    const hoy = this.ymdTodayAR();
-
-    const alumnos = await this.userRepo
-      .createQueryBuilder('user')
-      .where('user.activo = true')
-      .andWhere("LOWER(user.rol) IN ('alumno', 'alumno/a')")
-      .andWhere('user.telefono IS NOT NULL')
-      .getMany();
-
-    for (const u of alumnos) {
-      try {
-        await this.reenviarPlanVencidoSemanalSiCorresponde(u.id, hoy);
-        await this.sleep(800); // rate limit WhatsApp
-      } catch (e) {
-        console.error('Error aviso semanal', u.id, e);
-      }
+    } catch (e) {
+      console.error('Error guardando notificación plan_vencido', userId, e);
     }
-  }
 
-  private sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return {
+      ok: true,
+      userId,
+      cicloInicio: proximoInicio,
+      cicloFin: proximoFin,
+    };
   }
 
   private hoyISO_AR(): string {
     return this.ymdTodayAR(); // ya lo tenés armado AR
   }
 
-  private async activarTurnoFijo(usuarioId: number, horarioId: number) {
+  private async activarTurnoFijo(
+    usuarioId: number, 
+    horarioId: number,
+    skipLimitCheck: boolean = false,
+  ) {
     // ✅ si ya existe activo, no hacer nada
     const yaActivo = await this.turnoFijoRepo.findOne({
       where: { usuarioId, horarioId, activo: true } as any,
@@ -2316,6 +2425,35 @@ export class ReservaService {
     });
     if (yaActivo) return;
 
+    // =====================================================
+    // ✅ SEGURO: validar límite semanal de turnos permanentes
+    // =====================================================
+      if (!skipLimitCheck) {
+      const usuario = await this.userRepo.findOne({ where: { id: usuarioId } });
+      if (!usuario) throw new BadRequestException('Usuario no encontrado');
+
+      const planMensual = parseInt(usuario.planMensual ?? '0', 10);
+      const maxSemanales = Math.floor(planMensual / 4);
+
+      if (!Number.isFinite(maxSemanales) || maxSemanales <= 0) {
+        throw new BadRequestException(
+          'Este alumno no tiene plan activo para tener turnos fijos.',
+        );
+      }
+
+      const fijosActivos = await this.turnoFijoRepo.count({
+        where: { usuarioId, activo: true } as any,
+      });
+
+      if (fijosActivos >= maxSemanales) {
+        throw new BadRequestException(
+          `⚠️ Ya alcanzaste el límite semanal de ${maxSemanales} turnos permanentes según tu plan.`,
+        );
+      }
+    }
+
+    // reactivar o crear
+    
     const hoy = this.hoyISO_AR();
 
     // ✅ si existe inactivo, reactivar (mantiene trazabilidad)
@@ -2422,6 +2560,19 @@ export class ReservaService {
     }
 
     return null;
+  }
+
+  async getPrimeraReservaFutura(userId: number) {
+    const hoy = this.ymdTodayAR();
+
+    return this.reservaRepo
+      .createQueryBuilder('r')
+      .where('r.usuarioId = :userId', { userId })
+      .andWhere('r.estado = :estado', { estado: 'reservado' })
+      .andWhere('r.fechaTurno >= :hoy', { hoy })
+      .orderBy('r.fechaTurno', 'ASC')
+      .addOrderBy('r.id', 'ASC')
+      .getOne();
   }
 
 }

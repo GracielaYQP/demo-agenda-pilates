@@ -47,12 +47,14 @@ export class ReservaController {
   @UseGuards(JwtAuthGuard)
   @Get('mis-reservas')
   getMisReservas(@Req() req: Request) {
+    console.log('🔍 req.user MIS RESERVAS =', req.user);
     const idRaw = (req.user as any)?.id ?? (req.user as any)?.sub;
     if (!idRaw) throw new BadRequestException('Token inválido: no contiene ID');
 
     const userId = Number(idRaw);
     if (!Number.isInteger(userId)) throw new BadRequestException('El ID del usuario no es válido');
 
+    console.log('🔍 userId usado en mis-reservas =', userId);
     return this.reservaService.obtenerReservasPorUsuario(userId);
   }
 
@@ -73,7 +75,10 @@ export class ReservaController {
     const userId = body.userId ?? idFromToken;
 
     if (!userId || isNaN(Number(userId))) throw new BadRequestException('ID de usuario no válido');
-    if (rol === 'admin' && !body.userId) throw new BadRequestException('Un administrador debe indicar el usuario para reservar');
+    const esAdmin = rol === 'admin' || rol === 'superadmin';
+    if (esAdmin && !body.userId) {
+      throw new BadRequestException('Un administrador debe indicar el usuario para reservar');
+    }
     if (!body.fechaTurno) throw new BadRequestException('Debe indicarse la fecha del turno');
 
     const tipo: 'automatica'|'recuperacion'|'suelta' =

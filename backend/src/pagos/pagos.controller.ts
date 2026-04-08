@@ -1,8 +1,13 @@
-// pagos.controller.ts
 import { Controller, Get, Post, Body, Query, Delete, Param, ParseIntPipe } from '@nestjs/common';
 import { PagosService } from './pagos.service';
 import { UpsertPagoCicloDto } from './dto/upsert-pago-ciclo.dto';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from 'src/auth/jwt.guard';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { Roles } from 'src/auth/roles.decorator';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 @Controller('pagos')
 export class PagosController {
   constructor(private readonly svc: PagosService) {}

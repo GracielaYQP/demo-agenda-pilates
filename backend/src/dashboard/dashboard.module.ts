@@ -10,11 +10,12 @@ import { DashboardService } from './dashboard.service';
 import { RolesGuard } from '../auth/roles.guard';
 import { WhatsAppModule } from 'src/whatsapp/whatsapp.module';
 import { PagosModule } from 'src/pagos/pagos.module';
+import { Notificacion } from '../notificaciones/notificacion.entity';
 
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Pago, User, ValorPlan, Reserva, Horario]),
+    TypeOrmModule.forFeature([Pago, User, ValorPlan, Reserva, Horario, Notificacion,]),
     WhatsAppModule,PagosModule,],
   controllers: [DashboardController],
   providers: [DashboardService, RolesGuard],

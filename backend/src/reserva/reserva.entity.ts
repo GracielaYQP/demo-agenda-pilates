@@ -1,4 +1,3 @@
-// reserva.entity.ts
 import { Entity, PrimaryGeneratedColumn, ManyToOne, Column, JoinColumn } from 'typeorm';
 import { Horario } from '../horarios/horarios.entity';
 import { User } from '../users/user.entity'; // si ya tenés un modelo de usuario
@@ -42,11 +41,11 @@ export class Reserva {
   cierreEstudio!: boolean;
 
   @ManyToOne(() => Horario, horario => horario.reservas, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'horarioId' }) // 👈 asegurate de tener esto
+  @JoinColumn({ name: 'horarioId' })
   horario!: Horario;
 
   @ManyToOne(() => User, user => user.reservas, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'usuarioId' }) // 👈 esto también
+  @JoinColumn({ name: 'usuarioId' }) 
   usuario!: User;
 
 }

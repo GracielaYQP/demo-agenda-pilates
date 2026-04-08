@@ -161,7 +161,10 @@ export class UsersService {
 
   async countAdminsActivos(): Promise<number> {
     return this.userRepository.count({
-      where: { rol: 'admin', activo: true } as any,
+      where: [
+        { rol: 'admin', activo: true } as any,
+        { rol: 'superadmin', activo: true } as any,
+      ],
     });
   }
 

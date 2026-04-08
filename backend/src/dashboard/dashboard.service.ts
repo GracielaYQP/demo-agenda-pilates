@@ -8,6 +8,7 @@ import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { Horario } from 'src/horarios/horarios.entity';
 import { Reserva } from 'src/reserva/reserva.entity';
 import { PagosService } from 'src/pagos/pagos.service';
+import { Notificacion } from 'src/notificaciones/notificacion.entity';
 
 type ResumenMensualVM = {
   anio: number;
@@ -21,12 +22,15 @@ type ResumenMensualVM = {
 
 type DeudorVM = {
   userId: number;
-  alumno: string;
+  nombre: string;
+  apellido: string;
   plan: '4' | '8' | '12' | 'suelta';
   montoMensual: number;
   ultimaFechaPago: string | null;
   diasAtraso: number;
   estado: 'En término' | 'Atrasado';
+  cicloInicio: string;
+  cicloFin: string;
   contactos: {
     whatsapp?: string | null;
     telefono?: string | null;
@@ -42,22 +46,27 @@ type DeudoresResp = {
   items: DeudorVM[];
 };
 
+type ClasesOperacionVM = {
+  anio: number;
+  mes: number;
+  clasesRealizadas: number;
+  reservasTotales: number;
+  clasesSuspendidasFeriado: number;
+  clasesSuspendidasProfesora: number;
+  topHorarios: Array<{ label: string; reservas: number }>;
+};
+
 type AlumnosAsistenciaVM = {
   anio: number; mes: number;
-  alumnosActivos: number;
-  asistenciaPromedioPct: number;  
+  alumnosActivos: number; 
   cancelaciones: number;
   recuperaciones: number;         
   nuevosAlumnos: number;
-  rankingTop5: Array<{ alumno: string; pct: number }>;
-};
-
-type ClasesOperacionVM = {
-  anio: number; mes: number;
-  clasesDictadas: number;          // sesiones con actividad (ver nota)
-  tasaOcupacionPct: number;        // 0..100
-  capacidadLibrePerdida: number;   // asientos no usados x cancelaciones no recuperadas
-  topHorarios: Array<{ label: string; ocupacionPct: number }>;
+  distribucionPlanes: {
+    plan4: number;
+    plan8: number;
+    plan12: number;
+  };
 };
 
 @Injectable()
@@ -67,7 +76,9 @@ export class DashboardService {
     @InjectRepository(User) private usersRepo: Repository<User>,
     @InjectRepository(ValorPlan) private planesRepo: Repository<ValorPlan>,
     @InjectRepository(Reserva) private reservasRepo: Repository<Reserva>,   
-    @InjectRepository(Horario) private horariosRepo: Repository<Horario>, 
+    @InjectRepository(Horario) private horariosRepo: Repository<Horario>,
+    @InjectRepository(Notificacion)
+    private readonly notifRepo: Repository<Notificacion>, 
     private readonly whatsapp: WhatsAppService,
     private pagosSrv: PagosService,
   ) {}
@@ -100,9 +111,34 @@ export class DashboardService {
     const { startYMD, endYMD } = this.monthUtcRange(anio, mes);
 
     // 1) Alumnos activos (no admin) — si querés “vigente = pago al día”, acá podés cruzar con pagos del mes.
-    const alumnosActivos = await this.usersRepo.count({
-      where: { activo: true, rol: Not('admin') } as any,
-    });
+    const alumnosActivos = await this.usersRepo
+      .createQueryBuilder('u')
+      .where('u.activo = true')
+      .andWhere("LOWER(COALESCE(u.rol, '')) NOT IN ('admin', 'superadmin')")
+      .getCount();
+
+    const alumnosPorPlan = await this.usersRepo
+      .createQueryBuilder('u')
+      .select('u.planMensual', 'planMensual')
+      .addSelect('COUNT(*)', 'cantidad')
+      .where('u.activo = true')
+      .andWhere("LOWER(COALESCE(u.rol, '')) NOT IN ('admin', 'superadmin')")
+      .andWhere("u.planMensual IN ('4','8','12')")
+      .groupBy('u.planMensual')
+      .getRawMany<{ planMensual: '4' | '8' | '12'; cantidad: string }>();
+
+    const distribucionPlanes = {
+      plan4: 0,
+      plan8: 0,
+      plan12: 0,
+    };
+
+    for (const row of alumnosPorPlan) {
+      const cantidad = Number(row.cantidad || 0);
+      if (row.planMensual === '4') distribucionPlanes.plan4 = cantidad;
+      if (row.planMensual === '8') distribucionPlanes.plan8 = cantidad;
+      if (row.planMensual === '12') distribucionPlanes.plan12 = cantidad;
+    }
 
     // 2) Traer reservas del mes con joins para poder usar usuario/hora
     //    Seleccionamos solo lo necesario y usamos getRawMany
@@ -125,18 +161,6 @@ export class DashboardService {
         cancelacionMomentanea: boolean; fechaTurno: string; userId: number; horarioId: number; hora?: string;
       }>();
 
-    // Definiciones:
-    // - "reservadas (efectivas)" = estado != 'cancelado'
-    // - "asistidas" = (estado='recuperada') OR (estado='reservado' y el turno ya pasó)
-    const reservadasEfectivas = reservas.filter(r => r.estado !== 'cancelado');
-    const asistidas = reservas.filter(r =>
-      r.estado === 'recuperada' || (r.estado === 'reservado' && this.turnoYaPaso(r.fechaTurno, r.hora))
-    );
-
-    const asistenciaPromedioPct = reservadasEfectivas.length
-      ? Math.round((asistidas.length / reservadasEfectivas.length) * 100)
-      : 0;
-
     // 3) Cancelaciones y recuperaciones
     const cancelaciones = reservas.filter(r => r.estado === 'cancelado').length;
     const recuperaciones = reservas.filter(r => r.estado === 'recuperada').length;
@@ -144,53 +168,16 @@ export class DashboardService {
     // 4) Nuevos alumnos del mes (excluye admin)
     const nuevosAlumnos = await this.usersRepo.createQueryBuilder('u')
       .where('u.createdAt >= :start AND u.createdAt < :end', { start: startYMD, end: endYMD })
-      .andWhere('(u.rol IS NULL OR u.rol != :admin)', { admin: 'admin' })
+      .andWhere("LOWER(COALESCE(u.rol, '')) NOT IN ('admin', 'superadmin')")
       .getCount();
-
-    // 5) Ranking Top 5 por % asistencia (mín. 3 reservas efectivas)
-    const MIN_RESERVAS = 3;
-    const totByUser = new Map<number, number>();
-    const asisByUser = new Map<number, number>();
-
-    for (const r of reservas) {
-      if (r.estado !== 'cancelado') {
-        totByUser.set(r.userId, (totByUser.get(r.userId) || 0) + 1);
-      }
-      const contoAsistencia = (r.estado === 'recuperada') || (r.estado === 'reservado' && this.turnoYaPaso(r.fechaTurno, r.hora));
-      if (contoAsistencia) {
-        asisByUser.set(r.userId, (asisByUser.get(r.userId) || 0) + 1);
-      }
-    }
-
-    const userIds = Array.from(totByUser.keys());
-    const users = userIds.length
-      ? await this.usersRepo.createQueryBuilder('u')
-          .select(['u.id','u.nombre','u.apellido'])
-          .where('u.id IN (:...ids)', { ids: userIds })
-          .getMany()
-      : [];
-    const nameById = new Map<number, string>(users.map(u => [u.id, `${u.nombre ?? ''} ${u.apellido ?? ''}`.trim()]));
-
-    const rankingTop5 = userIds
-      .map(uid => {
-        const tot = totByUser.get(uid) || 0;
-        const asis = asisByUser.get(uid) || 0;
-        const pct = tot ? Math.round((asis / tot) * 100) : 0;
-        return { alumno: nameById.get(uid) || `#${uid}`, pct, tot };
-      })
-      .filter(x => x.tot >= MIN_RESERVAS)
-      .sort((a, b) => b.pct - a.pct)
-      .slice(0, 5)
-      .map(x => ({ alumno: x.alumno, pct: x.pct }));
 
     return {
       anio, mes,
       alumnosActivos,
-      asistenciaPromedioPct,
       cancelaciones,
       recuperaciones,
       nuevosAlumnos,
-      rankingTop5,
+      distribucionPlanes,
     };
   }
 
@@ -200,109 +187,94 @@ export class DashboardService {
   async getClasesOperacion(anio: number, mes: number): Promise<ClasesOperacionVM> {
     const { startYMD, endYMD } = this.monthUtcRange(anio, mes);
 
-    // Reservas del mes + capacidad por horario
-    const reservas = await this.reservasRepo.createQueryBuilder('r')
+    const reservasRaw = await this.reservasRepo.createQueryBuilder('r')
       .leftJoin('r.horario', 'h')
       .select([
         'r.id AS id',
         'r.estado AS estado',
-        'r.fechaTurno AS fechaTurno',
-        'h.id AS horarioId',
+        'r.fechaTurno AS "fechaTurno"',
+        'h.id AS "horarioId"',
+        'h.dia AS dia',
         'h.hora AS hora',
-        'h.totalReformers AS capacidad',   // 👈 tu Horario usa totalReformers como capacidad
       ])
-      .where('r.fechaTurno >= :start AND r.fechaTurno < :end', { start: startYMD, end: endYMD })
-      .getRawMany<{
-        id: number; estado: 'reservado'|'cancelado'|'recuperada'; fechaTurno: string;
-        horarioId: number; hora?: string; capacidad: number;
-      }>();
+      .where('r.fechaTurno >= :start AND r.fechaTurno < :end', {
+        start: startYMD,
+        end: endYMD,
+      })
+      .getRawMany<any>();
 
-    if (reservas.length === 0) {
-      return { anio, mes, clasesDictadas: 0, tasaOcupacionPct: 0, capacidadLibrePerdida: 0, topHorarios: [] };
-    }
+    console.log('RESERVA RAW EJEMPLO:', reservasRaw[0]);
 
-    // Agregar label por horario
-    const horarioIds = Array.from(new Set(reservas.map(r => r.horarioId)));
-    const horarios = await this.horariosRepo.createQueryBuilder('h')
-      .select(['h.id','h.dia','h.hora','h.totalReformers'])
-      .where('h.id IN (:...ids)', { ids: horarioIds })
-      .getMany();
-    const labelByHorario = new Map<number, string>(horarios.map(h => [h.id, this.labelHorario(h)]));
+    const reservas = reservasRaw.map((r: any) => ({
+      id: Number(r.id),
+      estado: r.estado as 'reservado' | 'cancelado' | 'recuperada',
+      fechaTurno: String(r.fechaTurno ?? r.fechaturno ?? ''),
+      horarioId: Number(r.horarioId ?? r.horarioid ?? 0),
+      dia: r.dia ? String(r.dia) : undefined,
+      hora: r.hora ? String(r.hora) : undefined,
+    }));
 
-    // Agrupar por sesión (horarioId + fecha)
-    type Sesion = {
-      horarioId: number; key: string; capacidad: number;
-      reservasNoCanceladas: number;
-      asistidas: number;
-      canceladas: number; // momentáneas (aprox: estado = 'cancelado')
-    };
-    const pad2 = (n:number)=> String(n).padStart(2,'0');
-    const keyOf = (ymd: string, hid: number) => `${ymd}|${hid}`;
+    const reservasValidas = reservas.filter(
+      r => r.estado !== 'cancelado' && r.horarioId > 0 && !!r.fechaTurno
+    );
 
-    const sesiones = new Map<string, Sesion>();
-
-    for (const r of reservas) {
-      const key = keyOf(r.fechaTurno, r.horarioId);
-      const cap = Number(r.capacidad) || 0;
-      const s = sesiones.get(key) ?? {
-        horarioId: r.horarioId,
-        key,
-        capacidad: cap,
-        reservasNoCanceladas: 0,
-        asistidas: 0,
-        canceladas: 0,
+    if (reservasValidas.length === 0) {
+      return {
+        anio,
+        mes,
+        clasesRealizadas: 0,
+        reservasTotales: 0,
+        clasesSuspendidasFeriado: 0,
+        clasesSuspendidasProfesora: 0,
+        topHorarios: [],
       };
-
-      if (r.estado !== 'cancelado') s.reservasNoCanceladas += 1;
-
-      // asistencia efectiva := recuperada  OR (reservado y ya pasó)
-      const contoAsistencia = (r.estado === 'recuperada') || (r.estado === 'reservado' && this.turnoYaPaso(r.fechaTurno, reservas.find(x => x.horarioId===r.horarioId && x.fechaTurno===r.fechaTurno)?.hora));
-      if (contoAsistencia) s.asistidas += 1;
-
-      if (r.estado === 'cancelado') s.canceladas += 1;
-
-      sesiones.set(key, s);
     }
 
-    const sesionesArr = Array.from(sesiones.values());
+    // Clase realizada = fecha + horario con al menos una reserva no cancelada
+    const sesionesRealizadas = new Set<string>();
+    for (const r of reservasValidas) {
+      sesionesRealizadas.add(`${r.fechaTurno}|${r.horarioId}`);
+    }
 
-    // Clases dictadas = sesiones con actividad (≥1 reserva en DB)
-    const clasesDictadas = sesionesArr.length;
+    const clasesRealizadas = sesionesRealizadas.size;
+    const reservasTotales = reservasValidas.length;
 
-    // Ocupación mensual = sum(min(asistidas, capacidad)) / sum(capacidad)
-    const sumAsientosOcup = sesionesArr.reduce((acc, s) => acc + Math.min(s.asistidas, s.capacidad), 0);
-    const sumCapacidad    = sesionesArr.reduce((acc, s) => acc + s.capacidad, 0);
-    const tasaOcupacionPct = sumCapacidad > 0 ? Math.round((sumAsientosOcup / sumCapacidad) * 100) : 0;
+    const horarioIds = Array.from(new Set(reservasValidas.map(r => r.horarioId)));
 
-    // Capacidad libre perdida por cancelaciones no recuperadas (aprox):
-    // pérdida sesión = min(canceladas, max(0, capacidad - asistidas))
-    const capacidadLibrePerdida = sesionesArr.reduce((acc, s) => {
-      const huecos = Math.max(0, s.capacidad - s.asistidas);
-      return acc + Math.min(s.canceladas, huecos);
-    }, 0);
+    const horarios = horarioIds.length
+      ? await this.horariosRepo.createQueryBuilder('h')
+          .select(['h.id', 'h.dia', 'h.hora'])
+          .where('h.id IN (:...ids)', { ids: horarioIds })
+          .getMany()
+      : [];
 
-    // Top horarios por % ocupación (sobre sus sesiones con actividad)
-    const porHorario = new Map<number, { asis: number; cap: number }>();
-    for (const s of sesionesArr) {
-      const agg = porHorario.get(s.horarioId) ?? { asis: 0, cap: 0 };
-      agg.asis += Math.min(s.asistidas, s.capacidad);
-      agg.cap  += s.capacidad;
-      porHorario.set(s.horarioId, agg);
+    const labelByHorario = new Map<number, string>(
+      horarios.map(h => [Number(h.id), `${(h as any).dia ?? ''} ${(h as any).hora ?? ''}`.trim()])
+    );
+
+    const porHorario = new Map<number, number>();
+    for (const r of reservasValidas) {
+      porHorario.set(r.horarioId, (porHorario.get(r.horarioId) || 0) + 1);
     }
 
     const topHorarios = Array.from(porHorario.entries())
-      .map(([hid, v]) => ({
+      .map(([hid, reservas]) => ({
         label: labelByHorario.get(hid) || `#${hid}`,
-        ocupacionPct: v.cap > 0 ? Math.round((v.asis / v.cap) * 100) : 0,
+        reservas,
       }))
-      .sort((a,b) => b.ocupacionPct - a.ocupacionPct)
+      .sort((a, b) => b.reservas - a.reservas)
       .slice(0, 8);
 
+    const clasesSuspendidasFeriado = 0;
+    const clasesSuspendidasProfesora = 0;
+
     return {
-      anio, mes,
-      clasesDictadas,
-      tasaOcupacionPct,
-      capacidadLibrePerdida,
+      anio,
+      mes,
+      clasesRealizadas,
+      reservasTotales,
+      clasesSuspendidasFeriado,
+      clasesSuspendidasProfesora,
       topHorarios,
     };
   }
@@ -312,31 +284,40 @@ export class DashboardService {
     ================================ */
   /** Resumen mensual para tarjetas y gráficos */
   async getResumenMensual(anio: number, mes: number): Promise<ResumenMensualVM> {
-    const pagosMes = await this.pagosRepo.find({ where: { anio, mes } });
+    const start = new Date(`${anio}-${String(mes).padStart(2, '0')}-01T00:00:00-03:00`);
+    const endMes = mes === 12 ? 1 : mes + 1;
+    const endAnio = mes === 12 ? anio + 1 : anio;
+    const end = new Date(`${endAnio}-${String(endMes).padStart(2, '0')}-01T00:00:00-03:00`);
+
+    const pagosMes = await this.pagosRepo.createQueryBuilder('p')
+      .where('p.fechaPago IS NOT NULL')
+      .andWhere('p.fechaPago >= :start AND p.fechaPago < :end', { start, end })
+      .getMany();
 
     const ingresosTotalesARS = pagosMes.reduce((acc, p) => acc + (p.montoARS || 0), 0);
     const pagosCount = pagosMes.length;
     const ticketPromedioARS = pagosCount ? Math.round(ingresosTotalesARS / pagosCount) : 0;
 
-    // porPlan (incluimos claves para todos los tipos por seguridad)
     const basePorPlan: Record<PlanTipo, number> = {
       suelta: 0,
       '4': 0,
       '8': 0,
       '12': 0,
     };
+
     for (const p of pagosMes) {
       basePorPlan[p.planTipo] = (basePorPlan[p.planTipo] || 0) + (p.montoARS || 0);
     }
 
-    // porDia
     const porDiaMap = new Map<number, number>();
     for (const p of pagosMes) {
       if (!p.fechaPago) continue;
+
       const d = new Date(p.fechaPago);
-      const dia = d.getUTCDate(); // usamos UTC para evitar problemas de TZ del server
+      const dia = d.getDate(); // mejor local que UTC para este caso
       porDiaMap.set(dia, (porDiaMap.get(dia) || 0) + p.montoARS);
     }
+
     const porDia = Array.from(porDiaMap.entries())
       .sort((a, b) => a[0] - b[0])
       .map(([dia, monto]) => ({ dia, monto }));
@@ -359,12 +340,22 @@ export class DashboardService {
    * - Para el resto, calcula monto por plan (valor_planes) y marca "Atrasado" si el corte ya pasó.
    */
   async getDeudoresEntre1y10(anio: number, mes: number): Promise<DeudoresResp> {
-    // ✅ YA NO ES "1 al 10". Es "deudores por ciclo vigente (no pagado)".
+    // deudores por ciclo vigente (no pagado).
 
-    const alumnosActivos = await this.usersRepo.find({
-      where: { activo: true, rol: Not('admin') } as any,
-      select: ['id', 'nombre', 'apellido', 'telefono', 'email', 'planMensual', 'rol'],
-    });
+  const alumnosActivos = await this.usersRepo
+    .createQueryBuilder('u')
+    .select([
+      'u.id',
+      'u.nombre',
+      'u.apellido',
+      'u.telefono',
+      'u.email',
+      'u.planMensual',
+      'u.rol',
+    ])
+    .where('u.activo = true')
+    .andWhere("LOWER(COALESCE(u.rol, '')) NOT IN ('admin', 'superadmin')")
+    .getMany();
 
     const planes = await this.planesRepo.find();
     const precioPorPlan = new Map<PlanTipo, number>(planes.map(p => [p.tipo, p.precioARS]));
@@ -407,12 +398,50 @@ export class DashboardService {
         const montoMensual = precioPorPlan.get(planTipo as any) ?? 0;
 
         const est = await this.pagosSrv.estadoCicloActual(a.id);
+        console.log('DEUDOR DEBUG', {
+          id: a.id,
+          alumno: `${a.apellido} ${a.nombre}`,
+          ok: est?.ok,
+          motivo: (est as any)?.motivo,
+          cicloInicio: est?.cicloInicio,
+          cicloFin: est?.cicloFin,
+          isPago: est?.isPago,
+        });
 
-        // si no hay ciclo calculable => no lo mostramos en deudores
-        if (!est?.cicloInicio || !est?.cicloFin) return null;
+        if (!est?.cicloInicio || !est?.cicloFin) {
+          console.log('OUT sin ciclo', a.id, a.apellido, a.nombre, est);
+          return null;
+        }
 
-        // ✅ DEUDOR = NO pagó el ciclo vigente (rojo)
-        if (est.isPago) return null;
+        // ✅ Si ya pagó, no es deudor
+        if (est.isPago) {
+          console.log('OUT ya pago', a.id, a.apellido, a.nombre);
+          return null;
+        }
+
+        // ✅ Si el ciclo todavía no empezó, es GRIS, no deudor
+        if (hoyYMD < est.cicloInicio) {
+          console.log('OUT ciclo no empezó', a.id, {
+            hoyYMD,
+            cicloInicio: est.cicloInicio,
+          });
+          return null;
+        }
+
+        // ✅ Si no pagó pero todavía no pasó la primera clase del ciclo, sigue siendo GRIS
+        const pasoPrimeraClase = await this.yaPasoPrimeraClaseDelCiclo(a.id, est.cicloInicio, est.cicloFin);
+        console.log('PRIMERA CLASE', {
+          id: a.id,
+          alumno: `${a.apellido} ${a.nombre}`,
+          pasoPrimeraClase,
+          cicloInicio: est.cicloInicio,
+          cicloFin: est.cicloFin,
+        });
+
+        if (!pasoPrimeraClase) {
+          console.log('OUT no pasó primera clase', a.id, a.apellido, a.nombre);
+          return null;
+        }
 
         // días atraso: si ya pasó el cicloFin, cuenta días; si está dentro del ciclo, 0
         const fin = new Date(`${est.cicloFin}T00:00:00-03:00`);
@@ -422,12 +451,15 @@ export class DashboardService {
 
         const vm: DeudorVM = {
           userId: a.id,
-          alumno: `${a.nombre} ${a.apellido}`.trim(),
+          nombre: a.nombre ?? '',
+          apellido: a.apellido ?? '',
           plan: planTipo,
           montoMensual,
           ultimaFechaPago: est.pago?.fechaPago ? new Date(est.pago.fechaPago).toISOString() : null,
           diasAtraso,
           estado: 'Atrasado',
+          cicloInicio: est.cicloInicio,
+          cicloFin: est.cicloFin,
           contactos: {
             whatsapp: a.telefono ? `https://wa.me/54${String(a.telefono).replace(/\D/g, '')}` : null,
             telefono: a.telefono ?? null,
@@ -437,7 +469,7 @@ export class DashboardService {
 
         return vm;
       } catch (e) {
-        // ✅ no rompas todo el listado por 1 alumno que falla
+        console.error('Error calculando deudor', a.id, a.apellido, a.nombre, e);
         return null;
       }
     });
@@ -445,7 +477,11 @@ export class DashboardService {
     const items = results
       .filter((x): x is DeudorVM => !!x)
       // opcional: ordenar para que sea prolijo
-      .sort((a, b) => a.alumno.localeCompare(b.alumno, 'es'));
+      .sort((a, b) => {
+        const ap = (a.apellido || '').localeCompare(b.apellido || '', 'es', { sensitivity: 'base' });
+        if (ap !== 0) return ap;
+        return (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' });
+      });
 
     const totalDeudores = items.length;
     const totalAdeudadoARS = items.reduce((acc, i) => acc + (i.montoMensual || 0), 0);
@@ -453,17 +489,31 @@ export class DashboardService {
     return { anio, mes, totalDeudores, totalAdeudadoARS, items };
   }
 
-
   async notificarDeudoresWhatsApp(anio: number, mes: number) {
     const deudores = await this.getDeudoresEntre1y10(anio, mes);
+
+    console.log(
+      'DEUDORES A NOTIFICAR:',
+      deudores.totalDeudores,
+      deudores.items.map(x => ({
+        userId: x.userId,
+        alumno: `${x.apellido} ${x.nombre}`,
+        telefono: x.contactos.telefono,
+        estado: x.estado
+      }))
+    );
 
     const resultados: Array<{ userId: number; ok: boolean; error?: string }> = [];
 
     for (const item of deudores.items) {
-      // Por seguridad, aunque la lista ya trae solo atrasados, volvemos a chequear:
+        console.log('INTENTANDO ENVIAR A:', {
+          userId: item.userId,
+          alumno: `${item.apellido} ${item.nombre}`,
+          telefono: item.contactos.telefono
+        });
       if (item.estado !== 'Atrasado') continue;
 
-      const nombre = item.alumno || 'alumno/a';
+      const nombre = (item.nombre || '').trim() || 'alumno/a';
       const E164 = this.toE164(item.contactos.telefono);
 
       if (!E164) {
@@ -486,9 +536,20 @@ export class DashboardService {
       try {
         // Tu WhatsAppService: sendTemplatePlanVencido(to, nombre, planType)
         await this.whatsapp.sendTemplatePlanVencido(E164, nombre, planTypeDesc);
+        console.log('✅ ENVIADO OK', item.userId, E164);
+
+        // ✅ REGISTRAR EN TABLA notificaciones
+        await this.notifRepo.insert({
+          usuarioId: item.userId,
+          tipo: 'plan_vencido',
+          cicloInicio: item.cicloInicio,
+          cicloFin: item.cicloFin,
+          fechaAviso: new Date().toISOString().slice(0, 10),
+        } as any);
 
         resultados.push({ userId: item.userId, ok: true });
       } catch (e: any) {
+        console.log('❌ ERROR EN ENVIO', item.userId, e?.message);
         resultados.push({
           userId: item.userId,
           ok: false,
@@ -503,7 +564,6 @@ export class DashboardService {
     };
   }
 
-
   private toE164(raw?: string | null): string | null {
     if (!raw) return null;
     let digits = raw.replace(/\D/g, '');
@@ -512,6 +572,63 @@ export class DashboardService {
     if (digits.length >= 10 && !digits.startsWith('0')) return `+549${digits}`;
     return null;
   }
-  
+
+  private async yaPasoPrimeraClaseDelCiclo(userId: number, cicloInicio: string, cicloFin: string): Promise<boolean> {
+    const candidatas = await this.reservasRepo.createQueryBuilder('r')
+      .leftJoin('r.horario', 'h')
+      .leftJoin('r.usuario', 'u')
+      .select([
+        'r.id AS id',
+        'r.fechaTurno AS fechaTurno',
+        'r.estado AS estado',
+        'h.hora AS hora',
+        'h.dia AS dia',
+      ])
+      .where('u.id = :userId', { userId })
+      .andWhere('r.fechaTurno >= :inicio AND r.fechaTurno <= :fin', {
+        inicio: cicloInicio,
+        fin: cicloFin,
+      })
+      .orderBy('r.fechaTurno', 'ASC')
+      .addOrderBy('h.hora', 'ASC')
+      .getRawMany<any>();
+
+    console.log('CANDIDATAS PRIMERA CLASE', {
+      userId,
+      cicloInicio,
+      cicloFin,
+      candidatas,
+    });
+
+    const primera = candidatas[0];
+
+    console.log('PRIMERA RESERVA TOMADA', {
+      userId,
+      cicloInicio,
+      cicloFin,
+      primera,
+    });
+
+    const rawFecha = primera?.fechaTurno ?? primera?.fechaturno;
+    if (!rawFecha) return false;
+
+    const fechaYMD =
+      typeof rawFecha === 'string'
+        ? rawFecha.slice(0, 10)
+        : new Date(rawFecha).toISOString().slice(0, 10);
+
+    const yaPaso = this.turnoYaPaso(fechaYMD, primera.hora);
+
+    console.log('RESULTADO turnoYaPaso', {
+      userId,
+      rawFecha,
+      fechaYMD,
+      hora: primera.hora,
+      yaPaso,
+      ahoraServidor: new Date().toISOString(),
+    });
+
+    return yaPaso;
+  }
 }  
 

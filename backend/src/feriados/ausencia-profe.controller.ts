@@ -3,8 +3,8 @@ import { AusenciaProfeService } from './ausencia-profe.service';
 import { CreateAusenciaDto } from './ausencia-profe.dto';
 import { ListResponse } from './ausencia-profe.types';
 import { AusenciaProfe } from './ausencia-profe.entity';
-import { Public } from 'src/auth/public.decorator';
-import { Roles } from 'src/auth/roles.decorator';
+import { Public } from '../auth/public.decorator';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('feriados/ausencias-profe')
 export class AusenciaProfeController {

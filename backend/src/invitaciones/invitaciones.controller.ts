@@ -1,6 +1,6 @@
 import { Controller, Get, Query, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InvitacionesService } from './invitaciones.service';
-import { Public } from 'src/auth/public.decorator';
+import { Public } from '../auth/public.decorator';
 import { VerifyInvitationDto } from './dto/verify-invitation.dto';
 
 @Controller('invitaciones')

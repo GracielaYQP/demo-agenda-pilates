@@ -2,9 +2,9 @@ import { Controller, Get, Post, Body, Query, Delete, Param, ParseIntPipe } from 
 import { PagosService } from './pagos.service';
 import { UpsertPagoCicloDto } from './dto/upsert-pago-ciclo.dto';
 import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/jwt.guard';
-import { RolesGuard } from 'src/auth/roles.guard';
-import { Roles } from 'src/auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')

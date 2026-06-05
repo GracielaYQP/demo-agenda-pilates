@@ -4,7 +4,7 @@ import { UpsertValorPlanDto } from './dto/upsert-valor-plan.dto';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
-import { Public } from 'src/auth/public.decorator';
+import { Public } from '../auth/public.decorator';
 
 @Controller('valor-planes')
 export class ValorPlanesController {

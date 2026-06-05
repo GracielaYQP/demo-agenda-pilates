@@ -10,7 +10,7 @@ import { JwtAuthGuard } from './jwt.guard';
 import { RolesGuard } from './roles.guard';
 import { Roles } from './roles.decorator';
 import { BootstrapAdminDto } from './dto/bootstrap-admin.dto';
-import { CreateUserDto } from 'src/users/user.dto';
+import { CreateUserDto } from '../users/user.dto';
 
 @Controller('auth')
 export class AuthController {

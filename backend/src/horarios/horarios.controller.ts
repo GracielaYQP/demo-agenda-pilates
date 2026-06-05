@@ -1,10 +1,10 @@
 import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Patch, Req, UseGuards } from '@nestjs/common';
 import { HorariosService } from './horarios.service';
 import { Request as ExpressRequest } from 'express';
-import { Public } from 'src/auth/public.decorator';
-import { JwtAuthGuard } from 'src/auth/jwt.guard';
-import { RolesGuard } from 'src/auth/roles.guard';
-import { Roles } from 'src/auth/roles.decorator';
+import { Public } from '../auth/public.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { UpdateBloqueoDto } from './dto/update-bloqueo.dto';
 
 

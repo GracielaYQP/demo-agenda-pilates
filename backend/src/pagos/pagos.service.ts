@@ -1,10 +1,10 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Pago } from './pagos.entity';
-import { UpsertPagoDto } from './dto/upsert-pago.dto';
-import { ReservaService } from 'src/reserva/reserva.service';
+import { ReservaService } from '../reserva/reserva.service';
 import { UpsertPagoCicloDto } from './dto/upsert-pago-ciclo.dto';
+import { CiclosAsistenciaService } from '../ciclos-asistencia/ciclos-asistencia.service';
 
 type PlanTipo = 'suelta'|'4'|'8'|'12';
 
@@ -12,6 +12,7 @@ type PlanTipo = 'suelta'|'4'|'8'|'12';
 export class PagosService {
   constructor(@InjectRepository(Pago) private repo: Repository<Pago>,
   private reservaService: ReservaService,
+  private ciclosAsistenciaService: CiclosAsistenciaService,
 ) {}
 
   // --- helpers de fecha AR ---
@@ -33,159 +34,324 @@ export class PagosService {
     return d.toISOString().slice(0,10);
   }
 
-
-  private async getCicloCobroActual(userId: number, hoyYMD: string): Promise<{
-    cicloInicio: string;
-    cicloFin: string;
-    // opcional para debug/UI:
-    base?: any;
-    } | null> {
-
-    const cicloActivo = await this.reservaService.getCicloPlanActual(userId, hoyYMD);
-
-    if (cicloActivo) {
-      const inicio = String(cicloActivo.inicio).slice(0, 10);
-      const finVentana = String(cicloActivo.finVentana).slice(0, 10);
-
-      // ✅ Mientras esté dentro del ciclo activo, el cobro corresponde a ese ciclo
-      return { cicloInicio: inicio, cicloFin: finVentana, base: cicloActivo };
-    }
-
-    // ✅ Si no hay ciclo activo (por ejemplo: ya terminó la última clase),
-    // buscamos el último ciclo conocido y calculamos el próximo cobro.
-    const last = await this.reservaService.getUltimoCicloPorCantidad(userId, hoyYMD);
-    if (!last) return null;
-
-    const baseFin = String(last.finReal || last.finVentana).slice(0, 10);
-    const inicioCobro = this.addDaysYMD(baseFin, 1);
-    const finCobro = this.addDaysYMD(inicioCobro, 29);
-
-    return { cicloInicio: inicioCobro, cicloFin: finCobro, base: last };
-  }
-
-  
-  // ✅ NUEVO: estado del pago por CICLO (esto pinta el $)
-// pagos.service.ts (BACKEND)
-
-  private pickCicloKeyDesdeAsistencia(ciclos: any[], hoy: string) {
+  private limpiarCiclosSolapados(ciclos: any[]) {
     const ymd = (x: any) => String(x ?? '').slice(0, 10);
 
-    const vigente = (ciclos ?? []).find(c => {
+    const ordenados = [...(ciclos ?? [])].sort((a, b) =>
+      ymd(a.cicloInicio).localeCompare(ymd(b.cicloInicio))
+    );
+
+    const limpios: any[] = [];
+
+    for (const c of ordenados) {
       const ini = ymd(c.cicloInicio);
-      const finVentana = ymd(c.finVentana);
-      return ini && finVentana && hoy >= ini && hoy <= finVentana;
-    });
+      const fin = ymd(c.cicloFin);
+      if (!ini || !fin) continue;
 
-    const mkNext = (finBase: string) => {
-      const inicioCobro = this.addDaysYMD(finBase, 1);
-      const finCobro = this.addDaysYMD(inicioCobro, 29);
-      return { cicloInicio: inicioCobro, cicloFin: finCobro, cicloActual: null, prePago: false };
-    };
+      const ultimo = limpios[limpios.length - 1];
 
-    // ✅ Si hay vigente…
-    if (vigente) {
-      const cicloInicio = ymd(vigente.cicloInicio);
-      const cicloFin = ymd(vigente.finVentana);
+      if (ultimo) {
+        const ultimoFin = ymd(ultimo.cicloFin);
 
-      const planMax = Number(vigente.planMax ?? 0);
-      const usadas = Number(vigente.usadasALaFecha ?? 0);
-      const completo = Boolean(vigente.completo) || (planMax > 0 && usadas >= planMax);
-
-      // 🔑 Si está completo, el cobro corresponde al “próximo ciclo”
-      if (completo) {
-        const finReal = ymd(vigente.finReal) || ymd(vigente.cicloFin) || ymd(vigente.finVentana);
-        if (!finReal) return null;
-        return { ...mkNext(finReal), prePago: true }; // “habilitado para pagar nuevo ciclo”
+        // Si se superpone con el anterior, descartamos el ciclo nuevo falso
+        if (ini <= ultimoFin) {
+          continue;
+        }
       }
 
-      // Si NO está completo => cobro del ciclo vigente
-      return { cicloInicio, cicloFin, cicloActual: vigente, prePago: false };
+      limpios.push(c);
     }
 
-    // ✅ Si NO hay vigente hoy => próximo cobro desde el último ciclo
-    const last = [...(ciclos ?? [])].sort((a, b) =>
+    return limpios.sort((a, b) =>
       ymd(b.cicloInicio).localeCompare(ymd(a.cicloInicio))
-    )[0];
+    );
+  }
 
-    const finBase = ymd(last?.finReal) || ymd(last?.cicloFin) || ymd(last?.finVentana);
-    if (!finBase) return null;
+  private async buscarSiguienteCicloDesdeAsistencia(userId: number, ciclos: any[], cicloActual: any) {
+    const ymd = (x: any) => String(x ?? '').slice(0, 10);
 
-    return mkNext(finBase);
+    const actualInicio = ymd(cicloActual?.cicloInicio);
+    if (!actualInicio) return null;
+
+    const ciclosOrdenados = [...(ciclos ?? [])].sort((a, b) =>
+      ymd(a.cicloInicio).localeCompare(ymd(b.cicloInicio))
+    );
+
+    const idx = ciclosOrdenados.findIndex(c => ymd(c.cicloInicio) === actualInicio);
+    if (idx < 0) return null;
+
+    // el siguiente cronológico dentro de asistencia
+    const siguiente = ciclosOrdenados[idx + 1];
+    if (!siguiente) return null;
+
+    return {
+      cicloInicio: ymd(siguiente.cicloInicio),
+      cicloFin: ymd(siguiente.cicloFin),
+    };
+  }
+
+  // estado del pago por CICLO (esto pinta el $)
+  private async resolverEstadoCobroDesdeAsistencia(userId: number, ciclos: any[], hoy: string) {
+    const ymd = (x: any) => String(x ?? '').slice(0, 10);
+
+    const ciclosOrdenados = [...(ciclos ?? [])].sort((a, b) =>
+      ymd(b.cicloInicio).localeCompare(ymd(a.cicloInicio))
+    );
+
+    const cicloActual = ciclosOrdenados.find(c => {
+      const ini = ymd(c.cicloInicio);
+      const fin = ymd(c.cicloFin);
+      return ini && fin && hoy >= ini && hoy <= fin;
+    }) ?? null;
+
+    if (!cicloActual) {
+      const primerCiclo = await this.resolverPrimerCicloDesdePrimeraReserva(userId);
+      if (!primerCiclo) return null;
+
+      return {
+        cicloActual: null,
+        cicloCobro: {
+          cicloInicio: primerCiclo.cicloInicio,
+          cicloFin: primerCiclo.cicloFin,
+        },
+        proximoCiclo: {
+          cicloInicio: primerCiclo.cicloInicio,
+          cicloFin: primerCiclo.cicloFin,
+        },
+        habilitarCobroAnticipado: false,
+        prePago: false,
+      };
+    }
+
+    const cicloInicioActual = ymd(cicloActual.cicloInicio);
+    const cicloFinActual = ymd(cicloActual.cicloFin);
+
+    const planMax = Number(cicloActual.planMax ?? 0);
+    const usadas = Number(cicloActual.usadasALaFecha ?? 0);
+
+    const clasesRestantes = Math.max(0, planMax - usadas);
+    const completo = Boolean(cicloActual.completo) || (planMax > 0 && usadas >= planMax);
+
+    const diasParaFinVentana = cicloActual?.finVentana
+      ? Math.ceil(
+          (
+            new Date(`${ymd(cicloActual.finVentana)}T00:00:00-03:00`).getTime() -
+            new Date(`${hoy}T00:00:00-03:00`).getTime()
+          ) / 86400000
+        )
+      : null;
+
+    const ventanaPorVencer =
+      diasParaFinVentana !== null &&
+      diasParaFinVentana >= 0 &&
+      diasParaFinVentana <= 7 &&
+      !completo;
+
+    const habilitarCobroAnticipado =
+      clasesRestantes <= 1 ||
+      completo ||
+      ventanaPorVencer;
+
+    let proximoCiclo = await this.buscarSiguienteCicloDesdeAsistencia(
+      userId,
+      ciclos,
+      cicloActual,
+    );
+
+    if (habilitarCobroAnticipado && !proximoCiclo) {
+      const proxInicio = await this.reservaService.getProximaFechaTurnoFijoDespuesDe(
+        userId,
+        cicloFinActual,
+      );
+
+      if (proxInicio) {
+        proximoCiclo = {
+          cicloInicio: proxInicio,
+          cicloFin: this.addDaysYMD(proxInicio, 29),
+        };
+      }
+    }
+
+    if (habilitarCobroAnticipado && proximoCiclo) {
+      return {
+        cicloActual,
+        cicloCobro: {
+          cicloInicio: proximoCiclo.cicloInicio,
+          cicloFin: proximoCiclo.cicloFin,
+        },
+        proximoCiclo,
+        habilitarCobroAnticipado: true,
+        prePago: true,
+      };
+    }
+
+    return {
+      cicloActual,
+      cicloCobro: {
+        cicloInicio: cicloInicioActual,
+        cicloFin: cicloFinActual,
+      },
+      proximoCiclo: proximoCiclo ?? null,
+      habilitarCobroAnticipado: false,
+      prePago: false,
+    };
+  }
+
+  private async buscarPagoDelCiclo(userId: number, cicloInicio: string, cicloFin: string) {
+    let pago = await this.repo.findOne({
+      where: { userId, cicloInicio, cicloFin },
+      order: { fechaPago: 'DESC' as any },
+    });
+
+    if (pago) return pago;
+
+    pago = await this.repo.createQueryBuilder('p')
+      .where('p.userId = :userId', { userId })
+      .andWhere('p.cicloInicio <= :cicloInicio', { cicloInicio })
+      .andWhere('p.cicloFin >= :cicloFin', { cicloFin })
+      .orderBy('p.fechaPago', 'DESC')
+      .getOne();
+
+    return pago ?? null;
   }
 
   async estadoCicloActual(userId: number) {
     const hoy = this.ymdTodayAR();
+    const ciclosRaw = await this.ciclosAsistenciaService.getHistorial(userId);
+    const ciclos = this.limpiarCiclosSolapados(ciclosRaw);
 
-    const ciclos = await this.reservaService.getAsistenciaCiclos(userId);
-    if (!ciclos?.length) return { userId, ok: false, motivo: 'Sin ciclos' };
+    let estadoCobro: any = null;
 
-    const picked = this.pickCicloKeyDesdeAsistencia(ciclos, hoy);
-    if (!picked) return { userId, ok: false, motivo: 'No se pudo resolver ciclo cobro' };
-
-    const { cicloInicio, cicloFin, cicloActual, prePago } = picked;
-
-    // 1) Primero intento match exacto (si existe)
-    let pago = await this.repo.findOne({ where: { userId, cicloInicio, cicloFin } });
-
-    // 2) Si NO hay, busco un pago que CONTENGA el ciclo actual completo
-    if (!pago) {
-      pago = await this.repo.findOne({
-        where: {
-          userId,
-          cicloInicio: LessThanOrEqual(cicloInicio), // empieza antes o igual al inicio del ciclo actual
-          cicloFin: MoreThanOrEqual(cicloFin),       // termina después o igual al fin del ciclo actual
-        },
-        order: { fechaPago: 'DESC' as any },
-      });
-    }
-
-    // 3) Si NO hay pago del ciclo actual ni solapado, busco pago ADELANTADO
-    let pagoAdelantado = false;
-
-    if (!pago) {
-      const hoy = this.ymdTodayAR();
-
-      const nextPago = await this.repo.findOne({
-        where: {
-          userId,
-          cicloInicio: MoreThanOrEqual(this.addDaysYMD(hoy, 1)), // estrictamente futuro
-        } as any,
-        order: { cicloInicio: 'ASC' as any, fechaPago: 'DESC' as any },
-      });
-
-      if (nextPago) {
-        pago = nextPago;
-        pagoAdelantado = true;
-      }
-    }
-
-
-    const isPago = !!pago?.fechaPago;
-    const pagoMatch =
-      !pago ? 'none'
-      : pagoAdelantado ? 'adelantado'
-      : (pago.cicloInicio === cicloInicio && pago.cicloFin === cicloFin ? 'exacto' : 'solapado');
-
-
-    // métricas SOLO si hay cicloActual (si es “próximo cobro”, puede no tener asistencias aún)
-    const planMax = Number(cicloActual?.planMax ?? 0);
-    const usadasALaFecha = Number(cicloActual?.usadasALaFecha ?? 0);
-    const restantesPlan = planMax > 0 ? Math.max(0, planMax - usadasALaFecha) : 0;
-
-    // ✅ Fases según tu política
-    // - ok (verde): pagado para ese ciclo
-    // - warn (gris): por vencer (resta 1 clase) OR prePago (ya habilitado a pagar nuevo ciclo)
-    // - vencido (rojo): no pagó y ya usó >= 1 clase del ciclo vigente
-    let fase: 'ok' | 'warn' | 'vencido';
-
-    if (isPago) {
-      fase = 'ok'; 
-    } else if (prePago) {
-      fase = 'warn';
-    } else if (restantesPlan === 1) {
-      fase = 'warn';
+    if (ciclos?.length) {
+      estadoCobro = await this.resolverEstadoCobroDesdeAsistencia(userId, ciclos, hoy);
     } else {
-      fase = usadasALaFecha >= 1 ? 'vencido' : 'warn';
+      const primerCiclo = await this.resolverPrimerCicloDesdePrimeraReserva(userId);
+
+      if (!primerCiclo) {
+        return {
+          userId,
+          ok: false,
+          motivo: 'Sin ciclos y sin reservas futuras',
+          fase: 'warn' as const,
+        };
+      }
+
+      estadoCobro = {
+        cicloActual: null,
+        cicloCobro: {
+          cicloInicio: primerCiclo.cicloInicio,
+          cicloFin: primerCiclo.cicloFin,
+        },
+        proximoCiclo: {
+          cicloInicio: primerCiclo.cicloInicio,
+          cicloFin: primerCiclo.cicloFin,
+        },
+        habilitarCobroAnticipado: false,
+        prePago: true,
+      };
+    }
+
+    if (!estadoCobro?.cicloCobro) {
+      return {
+        userId,
+        ok: false,
+        motivo: 'No se pudo resolver ciclo cobro',
+        fase: 'warn' as const,
+      };
+    }
+
+    const cicloInicio = String(estadoCobro.cicloCobro.cicloInicio).slice(0, 10);
+    const cicloFin = String(estadoCobro.cicloCobro.cicloFin).slice(0, 10);
+
+    const cicloActual = estadoCobro.cicloActual;
+
+    let pagoCicloActual: any = null;
+    let pagoProximo: any = null;
+
+    if (cicloActual) {
+      pagoCicloActual = await this.buscarPagoDelCiclo(
+        userId,
+        String(cicloActual.cicloInicio).slice(0, 10),
+        String(cicloActual.cicloFin).slice(0, 10),
+      );
+    }
+
+    if (estadoCobro.proximoCiclo) {
+      pagoProximo = await this.buscarPagoDelCiclo(
+        userId,
+        String(estadoCobro.proximoCiclo.cicloInicio).slice(0, 10),
+        String(estadoCobro.proximoCiclo.cicloFin).slice(0, 10),
+      );
+    }
+
+    const pagoCicloCobro = await this.buscarPagoDelCiclo(userId, cicloInicio, cicloFin);
+
+    let pago = pagoCicloActual ?? pagoProximo ?? pagoCicloCobro ?? null;
+    let fase: 'ok' | 'warn' | 'vencido' = 'warn';
+    let isPago = false;
+    let prePago = !!estadoCobro.prePago;
+
+    if (pagoCicloActual && pagoProximo) {
+      // ✅ ciclo actual pagado + próximo ciclo pagado adelantado
+      fase = 'ok';
+      isPago = true;
+      prePago = true;
+      pago = pagoProximo;
+
+    } else if (pagoCicloActual && estadoCobro.habilitarCobroAnticipado) {
+        // ✅ Actual pagado, pero todavía falta pagar el próximo.
+        // Dejamos pago = null para que el frontend NO muestre el pago anterior
+        // y permita abrir el modal de cobro adelantado.
+        fase = 'warn';
+        isPago = false;
+        prePago = true;
+        pago = null;
+
+    } else if (pagoCicloActual) {
+      // ✅ ciclo actual pagado normal
+      fase = 'ok';
+      isPago = true;
+      prePago = false;
+      pago = pagoCicloActual;
+
+    } else if (pagoCicloCobro) {
+      // ✅ caso sin ciclo actual todavía, pero ya tiene prepago
+      fase = 'ok';
+      isPago = true;
+      prePago = true;
+      pago = pagoCicloCobro;
+
+    } else if (estadoCobro.proximoCiclo && !estadoCobro.habilitarCobroAnticipado) {
+      const inicioProximo = String(estadoCobro.proximoCiclo.cicloInicio).slice(0, 10);
+
+      const inicioPaso = await this.reservaService.inicioDeCicloYaPasoQB(
+        userId,
+        inicioProximo,
+      );
+
+      if (!inicioPaso.ok) {
+        fase = 'warn';
+        isPago = false;
+        prePago = true;
+        pago = null;
+      } else {
+        fase = 'vencido';
+        isPago = false;
+        prePago = false;
+        pago = null;
+      }
+
+    } else if (estadoCobro.habilitarCobroAnticipado) {
+      fase = 'warn';
+      isPago = false;
+      prePago = true;
+      pago = null;
+
+    } else {
+      fase = 'vencido';
+      isPago = false;
+      prePago = false;
+      pago = null;
     }
 
     return {
@@ -193,37 +359,139 @@ export class PagosService {
       ok: true,
       cicloInicio,
       cicloFin,
-      isPago,
       pago: pago ?? null,
-      planMax,
-      usadasALaFecha,
-      restantesPlan,
-      fase,
+      isPago,
       prePago,
-      pagoMatch,
+      cicloActual: estadoCobro.cicloActual,
+      proximoCiclo: estadoCobro.proximoCiclo,
+      habilitarCobroAnticipado: estadoCobro.habilitarCobroAnticipado === true,
+      fase,
     };
   }
-
-  /**
-   * 🔑 CLAVE: acá poné la misma regla que usa tu ReservaService para finVentana.
-   * Si tu ventana es "inicio + 30 días", dejalo así.
-   * Si es otra (28, 31, etc.), ajustalo.
-   */
-  private calcularFinVentanaDesdeInicio(inicioYMD: string) {
-    // EJEMPLO: ventana de 30 días
-    return this.addDaysYMD(inicioYMD, 29);
-  }
-
+ 
   async upsertConfirmadoCiclo(dto: UpsertPagoCicloDto) {
+    const ahora = this.nowInArgentina();
     const hoy = this.ymdTodayAR();
 
-    const ciclos = await this.reservaService.getAsistenciaCiclos(dto.userId);
-    if (!ciclos?.length) throw new BadRequestException('Sin ciclos para el usuario');
+    const ciclosRaw = await this.reservaService.getAsistenciaCiclos(dto.userId);
+    const ciclos = this.limpiarCiclosSolapados(ciclosRaw);
 
-    const picked = this.pickCicloKeyDesdeAsistencia(ciclos, hoy);
-    if (!picked) throw new BadRequestException('No se pudo resolver ciclo cobro');
+    let estadoCobro: any = null;
 
-    const { cicloInicio, cicloFin } = picked;
+    if (ciclos?.length) {
+      estadoCobro = await this.resolverEstadoCobroDesdeAsistencia(dto.userId, ciclos, hoy);
+    } else {
+      const primerCiclo = await this.resolverPrimerCicloDesdePrimeraReserva(dto.userId);
+      if (!primerCiclo) {
+        throw new BadRequestException('Sin ciclos y sin primera reserva futura para el usuario');
+      }
+
+      estadoCobro = {
+        cicloActual: null,
+        cicloCobro: {
+          cicloInicio: primerCiclo.cicloInicio,
+          cicloFin: primerCiclo.cicloFin,
+        },
+        proximoCiclo: {
+          cicloInicio: primerCiclo.cicloInicio,
+          cicloFin: primerCiclo.cicloFin,
+        },
+        habilitarCobroAnticipado: false,
+        prePago: false,
+      };
+    }
+
+    if (!estadoCobro?.cicloCobro) {
+      throw new BadRequestException('No se pudo resolver ciclo cobro');
+    }
+
+    let cicloInicio = String(estadoCobro.cicloCobro.cicloInicio).slice(0, 10);
+    let cicloFin = String(estadoCobro.cicloCobro.cicloFin).slice(0, 10);
+
+    const hace10Seg = new Date(ahora.getTime() - 10_000);
+
+    const pagoRecienteIgual = await this.repo.createQueryBuilder('p')
+      .where('p.userId = :userId', { userId: dto.userId })
+      .andWhere('p.planTipo = :planTipo', { planTipo: dto.planTipo })
+      .andWhere('p.montoARS = :montoARS', { montoARS: dto.montoARS })
+      .andWhere('COALESCE(p.metodo, \'\') = COALESCE(:metodo, \'\')', { metodo: dto.metodo ?? '' })
+      .andWhere('COALESCE(p.notas, \'\') = COALESCE(:notas, \'\')', { notas: dto.notas ?? '' })
+      .andWhere('p.cicloInicio = :cicloInicio', { cicloInicio })
+      .andWhere('p.cicloFin = :cicloFin', { cicloFin })
+      .andWhere('p.fechaPago >= :desde', { desde: hace10Seg })
+      .orderBy('p.fechaPago', 'DESC')
+      .getOne();
+
+    if (pagoRecienteIgual) {
+      return pagoRecienteIgual;
+    }
+
+    let pagoMismoCiclo = await this.buscarPagoDelCiclo(dto.userId, cicloInicio, cicloFin);
+
+    // ✅ si ese ciclo ya tiene pago, avanzar al siguiente ciclo REAL de asistencia
+    if (pagoMismoCiclo) {
+      if (!ciclos?.length) {
+        throw new BadRequestException('No se pudo calcular el siguiente ciclo desde asistencia.');
+      }
+
+      const cicloBase = (ciclos ?? []).find((c: any) =>
+        String(c?.cicloInicio ?? '').slice(0, 10) === cicloInicio &&
+        String(c?.cicloFin ?? '').slice(0, 10) === cicloFin
+      );
+
+      let siguiente = cicloBase
+        ? await this.buscarSiguienteCicloDesdeAsistencia(dto.userId, ciclos, cicloBase)
+        : null;
+
+      // fallback: si el ciclo cobrado no estaba en la lista actual, intentar con proximoCiclo ya resuelto
+      if (!siguiente && estadoCobro?.proximoCiclo) {
+        siguiente = {
+          cicloInicio: String(estadoCobro.proximoCiclo.cicloInicio).slice(0, 10),
+          cicloFin: String(estadoCobro.proximoCiclo.cicloFin).slice(0, 10),
+        };
+      }
+      if (!siguiente) {
+        const proxInicio = await this.reservaService.getProximaFechaTurnoFijoDespuesDe(
+          dto.userId,
+          cicloFin,
+        );
+
+        if (!proxInicio) {
+          throw new BadRequestException('No se pudo calcular el próximo ciclo real del alumno.');
+        }
+
+        siguiente = {
+          cicloInicio: proxInicio,
+          cicloFin: this.addDaysYMD(proxInicio, 29),
+        };
+      }
+
+      cicloInicio = siguiente.cicloInicio;
+      cicloFin = siguiente.cicloFin;
+
+      // ✅ si incluso ese siguiente también ya estuviera pago, seguir avanzando
+      for (let guard = 0; guard < 24; guard++) {
+        const pagoExistente = await this.buscarPagoDelCiclo(dto.userId, cicloInicio, cicloFin);
+        if (!pagoExistente) break;
+
+        const cicloBaseLoop = (ciclos ?? []).find((c: any) =>
+          String(c?.cicloInicio ?? '').slice(0, 10) === cicloInicio &&
+          String(c?.cicloFin ?? '').slice(0, 10) === cicloFin
+        );
+
+        if (!cicloBaseLoop) {
+          throw new BadRequestException('No se pudo seguir avanzando al próximo ciclo real.');
+        }
+
+        const siguienteLoop = await this.buscarSiguienteCicloDesdeAsistencia(dto.userId, ciclos, cicloBaseLoop);
+        if (!siguienteLoop) {
+          throw new BadRequestException('No se pudo avanzar al siguiente ciclo no pago.');
+        }
+
+        cicloInicio = siguienteLoop.cicloInicio;
+        cicloFin = siguienteLoop.cicloFin;
+      }
+    }
 
     const row = {
       userId: dto.userId,
@@ -235,15 +503,22 @@ export class PagosService {
       cicloFin,
       mes: null,
       anio: null,
-      fechaPago: this.nowInArgentina(),
+      fechaPago: ahora,
     };
 
-    await this.repo.upsert(row, { conflictPaths: ['userId', 'cicloInicio', 'cicloFin'] });
+    await this.repo.upsert(row, {
+      conflictPaths: ['userId', 'cicloInicio', 'cicloFin'],
+    });
 
-    return this.repo.findOne({ where: { userId: dto.userId, cicloInicio, cicloFin } });
+    return this.repo.findOne({
+      where: {
+        userId: dto.userId,
+        cicloInicio,
+        cicloFin,
+      },
+    });
   }
   
-  // --- (Opcional) LEGACY por mes/año ---
   async estadoPorMes(userId: number, mes: number, anio: number) {
     const pago = await this.repo.findOne({ where: { userId, mes, anio } });
     return { userId, mes, anio, isPago: !!(pago?.fechaPago), pago };
@@ -333,6 +608,17 @@ export class PagosService {
     const pago = await this.repo.findOne({ where: { id } });
     if (!pago) throw new BadRequestException('Pago no encontrado');
     return this.repo.remove(pago);
+  }
+
+  private async resolverPrimerCicloDesdePrimeraReserva(userId: number) {
+    const primeraReserva = await this.reservaService.getPrimeraReservaFutura(userId);
+
+    if (!primeraReserva?.fechaTurno) return null;
+
+    const cicloInicio = String(primeraReserva.fechaTurno).slice(0, 10);
+    const cicloFin = this.addDaysYMD(cicloInicio, 29);
+
+    return { cicloInicio, cicloFin };
   }
 
 }

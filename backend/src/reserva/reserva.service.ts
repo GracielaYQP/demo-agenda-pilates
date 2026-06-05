@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, LessThan, LessThanOrEqual, Repository, MoreThan, MoreThanOrEqual } from 'typeorm';
 import { Reserva, TipoReserva } from './reserva.entity';
@@ -8,11 +8,12 @@ import { addDays, format, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Cron } from '@nestjs/schedule';
 import { AusenciaProfeService } from '../feriados/ausencia-profe.service';
-import { WhatsAppService } from 'src/whatsapp/whatsapp.service';
-import { Pago } from 'src/pagos/pagos.entity';
-import { Notificacion } from 'src/notificaciones/notificacion.entity';
-import { CierreTipo } from 'src/feriados/ausencia-profe.types';
-import { TurnoFijo } from 'src/turnos-fijos/turnos-fijos.entity';
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
+import { Pago } from '../pagos/pagos.entity';
+import { Notificacion } from '../notificaciones/notificacion.entity';
+import { CierreTipo } from '../feriados/ausencia-profe.types';
+import { TurnoFijo } from '../turnos-fijos/turnos-fijos.entity';
+import { CiclosAsistenciaService } from '../ciclos-asistencia/ciclos-asistencia.service';
 
 // Interfaz para la respuesta exitosa de la API de WhatsApp Cloud
 interface WhatsAppMessageResponse {
@@ -54,6 +55,8 @@ export class ReservaService {
     private turnoFijoRepo: Repository<TurnoFijo>, 
     private readonly ausenciaProfeService: AusenciaProfeService,
     private readonly whatsappService: WhatsAppService,
+    @Inject(forwardRef(() => CiclosAsistenciaService))
+    private readonly ciclosAsistenciaService: CiclosAsistenciaService,    
   ) { ReservaService.instancias++;
       console.log('🧩 ReservaService instanciado #', ReservaService.instancias);}
 
@@ -125,77 +128,6 @@ export class ReservaService {
         throw new BadRequestException('Ya tenés una reserva para ese día y horario.');
       }
 
-      // 🔴 Está cancelada
-      // if (existente.estado === 'cancelado') {
-      //   // ✅ Caso: canceló momentáneamente ESTE MISMO TURNO
-      //   // y ahora quiere volver (elige RECUPERACIÓN)
-      //   if (existente.cancelacionMomentanea && tipo === 'recuperacion') {
-      //     // 1) validar cupo
-      //     const ocupadas = await this.reservaRepo.count({
-      //       where: { horario: { id: horarioId }, fechaTurno: ft, estado: 'reservado' },
-      //     });
-
-      //     const total = Number(horario.totalReformers || 0);
-      //     const bloqueados = Math.max(0, Number((horario as any).blockedReformers || 0));
-
-      //     const libresTeoricos = Math.max(0, total - ocupadas);
-      //     const bloqueadosAplicados = Math.min(bloqueados, libresTeoricos);
-      //     const libresEfectivos = libresTeoricos - bloqueadosAplicados;
-
-      //     if (libresEfectivos <= 0) {
-      //       throw new BadRequestException('No hay reformers disponibles para volver a tomar tu lugar.');
-      //     }
-
-      //     // 2) Reglas de tiempo
-      //     const hora = String(horario.hora || '00:00').slice(0, 5);
-      //     const fechaHoraTurno = new Date(`${ft}T${hora}:00-03:00`);
-      //     const ahora = new Date(
-      //       new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }),
-      //     );
-      //     const diffMin = (fechaHoraTurno.getTime() - ahora.getTime()) / (1000 * 60);
-
-      //     // Nadie puede reactivar si ya empezó/pasó la clase
-      //     if (diffMin <= 0) {
-      //       throw new BadRequestException(
-      //         'No se puede volver a tomar el lugar de una clase ya iniciada o pasada.',
-      //       );
-      //     }
-
-      //     // Alumno: mínimo 1 hora antes
-      //     if (!esAdmin && diffMin < 60) {
-      //       throw new BadRequestException(
-      //         'Para volver a tomar tu lugar, debe ser al menos 1 hora antes del inicio de la clase.',
-      //       );
-      //     }
-
-      //     // ✅ Reactivar la MISMA fila
-      //     existente.estado = 'reservado';
-      //     existente.tipo = 'automatica';
-      //     existente.automatica = true;
-      //     existente.cancelacionMomentanea = false;
-      //     existente.cancelacionPermanente = false;
-      //     (existente as any).fechaCancelacion = null;
-
-      //     const guardada = await this.reservaRepo.save(existente);
-
-      //     return {
-      //       ...guardada,
-      //       aviso: 'Vemos que cancelaste este mismo turno hoy. Si confirmás como Recuperación, volverás a tomar tu lugar.',
-      //       reversionCancelacion: true,
-      //     } as any;
-      //   }
-
-      //   // ❌ Si está cancelada momentáneamente y NO es recuperación, bloqueamos automática
-      //   if (existente.cancelacionMomentanea && tipo === 'automatica') {
-      //     throw new BadRequestException(
-      //       'Ese día ya lo cancelaste por única vez para generar recuperación. No se puede volver a reservar automáticamente.',
-      //     );
-      //   }
-
-      //   // ✅ Si fue cancelación permanente (o “rara”), borramos para permitir crear una nueva
-      //   await this.reservaRepo.remove(existente);
-      // }
-
       if (existente.estado === 'cancelado') {
         // Si viene como automática pero en realidad está revirtiendo una cancelación momentánea
         if (existente.cancelacionMomentanea && tipo === 'automatica') {
@@ -247,7 +179,7 @@ export class ReservaService {
           (existente as any).fechaCancelacion = null;
 
           const guardada = await this.reservaRepo.save(existente);
-
+          await this.ciclosAsistenciaService.syncCicloAbierto(userId);
           return {
             ...guardada,
             aviso: 'La cancelación fue revertida y el lugar volvió a quedar reservado.',
@@ -358,6 +290,11 @@ export class ReservaService {
       // 🔒 Alumno: debe tener recuperaciones disponibles. Admin: puede cargar igual.
       if (!esAdmin) {
         const recuperacionesDisponibles = await this.contarCancelacionesMomentaneasDelMes(userId, ft);
+        console.log('🟣 VALIDANDO RECUPERACIÓN', {
+          userId,
+          fechaTurno: ft,
+          recuperacionesDisponibles,
+        });
         if (recuperacionesDisponibles <= 0) {
           throw new BadRequestException(
             'No tenés recuperaciones disponibles: primero debe existir una cancelación momentánea o un cierre del estudio.',
@@ -384,6 +321,15 @@ export class ReservaService {
     // =========================================================
     const fechaReserva = this.ymdTodayAR();
 
+    if (tipo === 'recuperacion' && !esAdmin) {
+      const saldoFinal = await this.contarCancelacionesMomentaneasDelMes(userId, ft);
+
+      if (saldoFinal <= 0) {
+        throw new BadRequestException(
+          'No tenés recuperaciones disponibles. El saldo ya fue utilizado.',
+        );
+      }
+    }
     const nuevaReserva = this.reservaRepo.create({
       horario,
       usuario,
@@ -402,7 +348,7 @@ export class ReservaService {
     if (tipo === 'automatica') {
       await this.activarTurnoFijo(userId, horarioId, true);
     }
-
+    await this.ciclosAsistenciaService.syncCicloAbierto(userId);
     return reservaGuardada;
   }
 
@@ -440,7 +386,7 @@ export class ReservaService {
   async anularReserva(reservaId: number) {
     const reserva = await this.reservaRepo.findOne({
       where: { id: reservaId },
-      relations: ['horario'],
+      relations: ['horario', 'usuario'],
     });
 
     if (!reserva) throw new Error('Reserva no encontrada');
@@ -448,17 +394,25 @@ export class ReservaService {
     const horario = reserva.horario;
 
     await this.reservaRepo.remove(reserva);
-
+    if (reserva.usuario?.id) {
+      await this.ciclosAsistenciaService.syncCicloAbierto(reserva.usuario.id);
+    }
     return { mensaje: 'Reserva anulada correctamente' };
   }
 
-  async editarReserva(reservaId: number, datos: { nombre?: string; apellido?: string; nuevoUserId?: number }) {
+  async editarReserva(
+    reservaId: number,
+    datos: { nombre?: string; apellido?: string; nuevoUserId?: number }
+  ) {
     const reserva = await this.reservaRepo.findOne({
       where: { id: reservaId },
       relations: ['usuario'],
     });
 
     if (!reserva) throw new Error('Reserva no encontrada');
+
+    // 👇 guardamos el usuario original antes de modificar
+    const userIdAnterior = reserva.usuario?.id ?? null;
 
     if (datos.nombre) reserva.nombre = datos.nombre;
     if (datos.apellido) reserva.apellido = datos.apellido;
@@ -469,7 +423,24 @@ export class ReservaService {
       reserva.usuario = nuevoUsuario;
     }
 
-    return this.reservaRepo.save(reserva);
+    const guardada = await this.reservaRepo.save(reserva);
+
+    // 👇 sincronizamos ciclos
+
+    // usuario anterior
+    if (userIdAnterior) {
+      await this.ciclosAsistenciaService.syncCicloAbierto(userIdAnterior);
+    }
+
+    // usuario nuevo (si cambió)
+    if (
+      guardada.usuario?.id &&
+      guardada.usuario.id !== userIdAnterior
+    ) {
+      await this.ciclosAsistenciaService.syncCicloAbierto(guardada.usuario.id);
+    }
+
+    return guardada;
   }
 
   async cancelarPorFecha(horarioId: number, userId: number, fechaTurno: string) {
@@ -508,7 +479,7 @@ export class ReservaService {
       },
       relations: ['horario', 'usuario'],
     });
-    
+
     // 2) Si existe → actualizar (pero sin pisar cierres)
     if (existente) {
       // 🔒 Si ya está cerrado por sistema, no lo conviertas en cancelado
@@ -529,11 +500,15 @@ export class ReservaService {
       // ✅ CLAVE: esto evita el “mezclado”
       (existente as any).cierreEstudio = false;
 
-      // (opcional pero recomendable: asegurar tipo coherente)
+      // ✅ asegurar tipo coherente
       (existente as any).tipo = 'automatica';
       existente.automatica = true;
 
       await this.reservaRepo.save(existente);
+
+      // ✅ sincronizar SOLO ciclo abierto
+      await this.ciclosAsistenciaService.syncCicloAbierto(userId);
+
       return { mensaje: '✅ Reserva cancelada por esta vez.' };
     }
 
@@ -556,14 +531,17 @@ export class ReservaService {
       cancelacionPermanente: false,
       fechaCancelacion: new Date(),
 
-      // ✅ CLAVE: explícito para no confundir con cierre
+      // ✅ explícito para no confundir con cierre
       cierreEstudio: false,
 
-      // (si tu entity tiene tipo)
       tipo: 'automatica',
     } as any);
 
     await this.reservaRepo.save(reservaCancelada);
+
+    // ✅ sincronizar SOLO ciclo abierto
+    await this.ciclosAsistenciaService.syncCicloAbierto(userId);
+
     return { mensaje: '✅ Reserva cancelada por esta vez.' };
   }
 
@@ -710,6 +688,7 @@ export class ReservaService {
         await this.horarioRepo.save(reserva.horario);
       }
       await this.reservaRepo.remove(reserva);
+      await this.ciclosAsistenciaService.syncCicloAbierto(reserva.usuario.id);
       return { mensaje: '✅ Reserva eliminada.' };
     }
 
@@ -720,6 +699,7 @@ export class ReservaService {
         await this.horarioRepo.save(reserva.horario);
       }
       await this.reservaRepo.remove(reserva);
+      await this.ciclosAsistenciaService.syncCicloAbierto(reserva.usuario.id);
       return { mensaje: '✅ Recuperación eliminada.' };
     }
 
@@ -745,6 +725,7 @@ export class ReservaService {
       }
 
       await this.reservaRepo.save(reserva);
+      await this.ciclosAsistenciaService.syncCicloAbierto(reserva.usuario.id);
 
       return {
         mensaje: '📌 Estudio cerrado: la reserva quedó marcada como CERRADA y se acredita recuperación.',
@@ -774,8 +755,7 @@ export class ReservaService {
     }
 
     await this.reservaRepo.save(reserva);
-
-    return {
+    await this.ciclosAsistenciaService.syncCicloAbierto(reserva.usuario.id);    return {
       mensaje:
         tipo === 'momentanea'
           ? '✅ Reserva cancelada por esta vez. Podrás recuperar la clase.'
@@ -810,7 +790,6 @@ export class ReservaService {
 
       const horariosDelDia = await this.horarioRepo.find({
         where: { dia: diaCapitalizado },
-        // relations: ['reservas', 'reservas.usuario'],
       });
 
       for (const horario of horariosDelDia) {
@@ -893,6 +872,7 @@ export class ReservaService {
             } as any);
 
             await this.reservaRepo.save(nuevaCierre);
+            await this.ciclosAsistenciaService.syncCicloAbierto(usuarioId);
           }
 
           continue; // ✅ cerrado → NO reservas normales
@@ -925,19 +905,38 @@ export class ReservaService {
           });
           if (existente) continue;
 
-          // ✅ Cupo efectivo (respeta bloqueados)
+          // ✅ Cupo para turnos fijos automáticos
+          // Regla de negocio:
+          // - Los turnos fijos IGNORAN blockedReformers
+          // - Pero nunca deben superar los reformers físicos reales
+
           const total = Number((horario as any).totalReformers ?? 0);
-          const bloqueados = Math.max(0, Number((horario as any).blockedReformers ?? 0));
 
           const ocupadas = await this.reservaRepo.count({
-            where: { horario: { id: horario.id }, fechaTurno, estado: 'reservado' } as any,
+            where: {
+              horario: { id: horario.id },
+              fechaTurno,
+              estado: 'reservado',
+            } as any,
           });
 
-          const libresTeoricos = Math.max(0, total - ocupadas);
-          const bloqueadosAplicados = Math.min(bloqueados, libresTeoricos);
-          const libresEfectivos = libresTeoricos - bloqueadosAplicados;
+          // Si ya están ocupados todos los reformers reales, no agrego más
+          if (ocupadas >= total) {
+            console.log(
+              `🚫 Sin reformers físicos disponibles para turno fijo automático ` +
+              `en horario ${horario.id} (${fechaTurno} ${(horario as any).hora}). ` +
+              `Total=${total}, ocupadas=${ocupadas}, bloqueados=${Number((horario as any).blockedReformers ?? 0)}`
+            );
+            continue;
+          }
 
-          if (libresEfectivos <= 0) continue;
+          // Solo log informativo: los bloqueados se ignoran para turnos fijos
+          if (Number((horario as any).blockedReformers ?? 0) > 0) {
+            console.log(
+              `ℹ️ blockedReformers=${Number((horario as any).blockedReformers ?? 0)} ignorado ` +
+              `para turno fijo automático en horario ${horario.id} (${fechaTurno} ${(horario as any).hora})`
+            );
+          }
 
           const u = await this.userRepo.findOne({ where: { id: usuarioId } });
           if (!u) continue;
@@ -958,6 +957,7 @@ export class ReservaService {
           } as any);
 
           await this.reservaRepo.save(nuevaReserva);
+          await this.ciclosAsistenciaService.syncCicloAbierto(usuarioId);
         }
       }
     }
@@ -975,22 +975,33 @@ export class ReservaService {
         estado: 'reservado',
         fechaTurno: LessThanOrEqual(hoyYMD),
       },
-      relations: ['horario'],
+      relations: ['horario', 'usuario'], // 👈 IMPORTANTE
     });
 
     for (const reserva of reservasRecuperadas) {
       // Liberar la cama
       if (reserva.horario) {
-        reserva.horario.reformersReservados = Math.max(0, reserva.horario.reformersReservados - 1);
+        reserva.horario.reformersReservados = Math.max(
+          0,
+          reserva.horario.reformersReservados - 1
+        );
         await this.horarioRepo.save(reserva.horario);
       }
 
       // Marcar como "recuperada"
       reserva.estado = 'recuperada';
-      reserva.fechaCancelacion = new Date(); // opcional, puede llamarse fechaRegistroFinal si querés
+      reserva.fechaCancelacion = new Date();
 
       await this.reservaRepo.save(reserva);
-      console.log(`✅ Reserva marcada como recuperada: ${reserva.nombre} ${reserva.apellido} (${reserva.fechaTurno})`);
+
+      // ✅ sincronizar ciclo abierto del usuario
+      if (reserva.usuario?.id) {
+        await this.ciclosAsistenciaService.syncCicloAbierto(reserva.usuario.id);
+      }
+
+      console.log(
+        `✅ Reserva marcada como recuperada: ${reserva.nombre} ${reserva.apellido} (${reserva.fechaTurno})`
+      );
     }
   }
 
@@ -1009,7 +1020,7 @@ export class ReservaService {
         estado: 'reservado',
         fechaTurno: LessThanOrEqual(hoyYMD),
       },
-      relations: ['horario'],
+      relations: ['horario', 'usuario'],
     });
 
     for (const r of recs) {
@@ -1019,6 +1030,9 @@ export class ReservaService {
         r.estado = 'recuperada';          // one-shot ✅
         r.fechaCancelacion = ahora;  // marca de cierre (opcional)
         await this.reservaRepo.save(r);
+        if (r.usuario?.id) {
+          await this.ciclosAsistenciaService.syncCicloAbierto(r.usuario.id);
+        }
       }
     }
   }
@@ -1102,6 +1116,7 @@ export class ReservaService {
       where: {
         usuario: { id: userId },
         tipo: 'recuperacion',
+        automatica: false,
         estado: In(['reservado', 'recuperada']),
         fechaTurno: Between(inicio, finVentana),
       } as any,
@@ -1356,6 +1371,7 @@ export class ReservaService {
           `🔔 CRON: voy a evaluar userId=${r.usuario.id} fecha=${r.fechaTurno} hora=${horaTurno} turnoDate=${turnoDate.toISOString()} ahoraAR=${ahoraAR.toISOString()}`
         );
 
+        await this.ciclosAsistenciaService.syncCicloAbierto(r.usuario.id);
         await this.notificarLimiteDeClases(r.usuario.id, r.fechaTurno);
         usuariosProcesados.add(r.usuario.id);
       } catch (e) {
@@ -1395,8 +1411,6 @@ export class ReservaService {
     if (Number.isNaN(ahoraAR.getTime())) return false;
     return turnoAR.getTime() <= ahoraAR.getTime() + 60_000;
 
-    // ⏱️ margen de 60 segundos
-    return turnoAR.getTime() <= ahoraAR.getTime() + 60_000;
   }
 
   private ymdAddDays(ymd: string, days: number) {
@@ -1417,7 +1431,7 @@ export class ReservaService {
 
   private esRolAdmin(rol?: string): boolean {
     const r = String(rol ?? '').trim().toLowerCase();
-    return r === 'admin'|| r === 'superadmin';
+    return r === 'admin';
   }
 
   public async getCicloPlanActual(userId: number, refYMD: string) {
@@ -1457,102 +1471,92 @@ export class ReservaService {
 
     const ymd = (d: any) => String(d ?? '').slice(0, 10);
 
-    // 1) Traer automáticas NO permanentes en un rango amplio alrededor de ref (para no “perder” el inicio real)
-    const desde = this.ymdAddDays(ref, -240);
-    const hasta = this.ymdAddDays(ref, +120);
-
-    const autos = await this.reservaRepo.find({
+    // ✅ Primera automática PROGRAMADA del alumno
+    // Puede estar reservada, cancelada momentánea o cerrada.
+    // Solo excluimos cancelación permanente.
+    const primeraAuto = await this.reservaRepo.findOne({
       where: {
         usuario: { id: userId },
         tipo: 'automatica',
         cancelacionPermanente: false,
-        fechaTurno: Between(desde, hasta),
       } as any,
       order: { fechaTurno: 'ASC', id: 'ASC' } as any,
     });
 
-    // Fallback total: buscar la primera automática >= ref
-    // if (!autos.length) {
-    //   const next = await this.reservaRepo.findOne({
-    //     where: {
-    //       usuario: { id: userId },
-    //       tipo: 'automatica',
-    //       cancelacionPermanente: false,
-    //       fechaTurno: MoreThanOrEqual(ref),
-    //     } as any,
-    //     order: { fechaTurno: 'ASC', id: 'ASC' } as any,
-    //   });
-    //   if (!next?.fechaTurno) return null;
+    if (!primeraAuto?.fechaTurno) return null;
 
-    //   const inicio = ymd(next.fechaTurno);
-    //   return this.construirCicloDesdeInicio(userId, inicio, maximas);
-    // }
-      
-    // Fallback: si no hay automáticas, no hay ciclo
-    if (!autos.length) return null;
+    let start = ymd(primeraAuto.fechaTurno);
+    const ciclosYaArmados: {
+      inicio: string;
+      finReal: string;
+      finVentana: string;
+    }[] = [];
 
-     // 2) anchor cercano a ref
-    const anchor = autos.filter(a => ymd(a.fechaTurno) <= ref).at(-1) ?? autos[0];
-    let start = ymd(anchor.fechaTurno);
+    for (let guard = 0; guard < 80; guard++) {
+      const ciclo = await this.construirCicloDesdeInicio(
+        userId,
+        start,
+        maximas,
+        ciclosYaArmados,
+      );
 
-    // 3) retroceder para encontrar el inicio real (hasta 30 días hacia atrás, repetido)
-    for (let guard = 0; guard < 60; guard++) {
-      const lower = this.ymdAddDays(start, -29);
-
-      const prev =
-        [...autos].reverse().find(a => {
-          const d = ymd(a.fechaTurno);
-          return d < start && d >= lower;
-        }) ??
-        (await this.reservaRepo.findOne({
-          where: {
-            usuario: { id: userId },
-            tipo: 'automatica',
-            cancelacionPermanente: false,
-            fechaTurno: Between(lower, this.ymdAddDays(start, -1)),
-          } as any,
-          order: { fechaTurno: 'DESC', id: 'DESC' } as any,
-        }));
-
-      if (!prev?.fechaTurno) break;
-      start = ymd(prev.fechaTurno);
-    }
-
-
-     // 4) avanzar ciclos hasta encerrar ref
-    for (let guard = 0; guard < 60; guard++) {
-      const ciclo = await this.construirCicloDesdeInicio(userId, start, maximas);
       const finEfectivo = ciclo.completo ? ciclo.finReal : ciclo.finVentana;
-      // ✅ ref dentro de este ciclo
-      if (ref >= ciclo.inicio && ref <= finEfectivo) return ciclo;
-      // ✅ ref posterior: buscar próximo inicio por TURNO FIJO (la regla real)
-      if (ref > finEfectivo) {
-        const nextStart = await this.proximaFechaTurnoFijoDespuesDe(userId, finEfectivo);
-        if (!nextStart) return null;
-        start = nextStart;
-        continue;
+      if (!ciclo.inicioValido) {
+        break;
       }
 
-      // ref < inicio (raro): retroceder una automática y volver a intentar
-      const prevAny =
-        [...autos].reverse().find(a => ymd(a.fechaTurno) < start) ??
-        (await this.reservaRepo.findOne({
-          where: {
-            usuario: { id: userId },
-            tipo: 'automatica',
-            cancelacionPermanente: false,
-            fechaTurno: LessThan(start),
-          } as any,
-          order: { fechaTurno: 'DESC', id: 'DESC' } as any,
-        }));
+      ciclosYaArmados.push({
+        inicio: ciclo.inicio,
+        finReal: ciclo.finReal,
+        finVentana: ciclo.finVentana,
+      });
 
-      if (!prevAny?.fechaTurno) return null;
-      start = ymd(prevAny.fechaTurno);
+      // ✅ ref cae dentro del ciclo
+      if (ref >= ciclo.inicio && ref <= finEfectivo) {
+        return ciclo;
+      }
+
+      // ✅ PRÓXIMO CICLO:
+      // Se toma desde la próxima fecha de TURNO FIJO programada,
+      // independientemente de si luego la reserva real está reservada,
+      // cancelada momentánea o cerrada.
+
+      const baseParaSiguiente = ciclo.completo
+        ? ciclo.finReal
+        : ciclo.finVentana;
+
+      const nextStart =
+        await this.proximaReservaAutomaticaDespuesDe(userId,baseParaSiguiente)
+        ?? await this.proximaFechaTurnoFijoDespuesDe(userId, baseParaSiguiente);
+
+      // 🔒 Evitar ciclos superpuestos:
+      // si el próximo inicio cae dentro del ciclo actual,
+      // NO abrir un ciclo nuevo.
+      if (nextStart) {
+        const nextStartYMD = String(nextStart).slice(0, 10);
+
+        if (nextStartYMD <= finEfectivo) {
+          return ciclo;
+        }
+      }
+   
+      if (!nextStart) {
+        return ref > finEfectivo ? ciclo : null;
+      }
+
+      if (ref > finEfectivo && ref < nextStart) {
+        return ciclo;
+      }
+
+      if (ref < nextStart) {
+        return null;
+      }
+
+      start = nextStart;
     }
 
     return null;
   }
-
 /*
  * ✅ Construye un ciclo usando:
  * - inicio = automática ancla (aunque esté cancelada o cerrado)
@@ -1564,6 +1568,7 @@ export class ReservaService {
     userId: number,
     inicioYMD: string,
     planMax: number,
+    ciclosYaArmados: { inicio: string; finReal: string; finVentana: string }[] = [],
   ): Promise<{
     inicio: string;
     finVentana: string;
@@ -1571,11 +1576,33 @@ export class ReservaService {
     usadas: number;
     maximas: number;
     completo: boolean;
+    inicioValido: boolean;
   }> {
     const inicio = String(inicioYMD).slice(0, 10);
     const finVentana = this.ymdAddDays(inicio, 29);
 
-    // Traer reservas en ventana (incluye cancel/cerrado para que NO consuman)
+    // 🔒 Evita ciclos fantasmas:
+    // si este inicio cae dentro de un ciclo REAL ya armado, no puede iniciar otro ciclo.
+    const caeDentroDeCicloExistente = ciclosYaArmados.some(c => {
+      const cInicio = String(c.inicio).slice(0, 10);
+      const cFin = String(c.finReal || c.finVentana).slice(0, 10);
+
+      return inicio >= cInicio && inicio <= cFin;
+    });
+
+    if (caeDentroDeCicloExistente) {
+      return {
+        inicio,
+        finVentana,
+        finReal: finVentana,
+        usadas: 0,
+        maximas: planMax,
+        completo: false,
+        inicioValido: false,
+      };
+    }
+
+    // Traer reservas dentro de la ventana de 30 días
     const reservas = await this.reservaRepo.find({
       where: {
         usuario: { id: userId },
@@ -1586,8 +1613,10 @@ export class ReservaService {
       order: { fechaTurno: 'ASC', id: 'ASC' } as any,
     });
 
-    // Consumidas = las que cuentan como "usada" de plan (tu regla oficial)
+    // Solo cuentan las reservas consumidas:
+    // reservado / recuperada / suelta según tu esConsumidaParaCiclo()
     const consumidas: Reserva[] = [];
+
     for (const r of reservas) {
       if (!this.esConsumidaParaCiclo(r)) continue;
       consumidas.push(r);
@@ -1595,7 +1624,22 @@ export class ReservaService {
 
     const completo = consumidas.length >= planMax;
     const usadas = Math.min(consumidas.length, planMax);
-
+    
+    console.log('🧮 CONSUMIDAS CICLO', {
+      userId,
+      inicio,
+      finVentana,
+      planMax,
+      consumidas: consumidas.map((r: any) => ({
+        id: r.id,
+        fechaTurno: String(r.fechaTurno).slice(0, 10),
+        estado: r.estado,
+        tipo: r.tipo,
+        automatica: r.automatica,
+      })),
+    });
+    // Si llegó a planMax, cierra por cantidad.
+    // Si no, cierra por ventana.
     const finReal = completo
       ? String(consumidas[planMax - 1].fechaTurno).slice(0, 10)
       : finVentana;
@@ -1607,6 +1651,7 @@ export class ReservaService {
       usadas,
       maximas: planMax,
       completo,
+      inicioValido: true,
     };
   }
 
@@ -1835,7 +1880,6 @@ export class ReservaService {
 
     const minYmd = (a: string, b: string) => (a <= b ? a : b);
 
-    // 1) Ciclos hacia atrás
     const ciclos: Array<{
       inicio: string;
       finVentana: string;
@@ -1845,12 +1889,9 @@ export class ReservaService {
       completo: boolean;
     }> = [];
 
-    // ✅ guard por ventana efectiva (evita repetir el mismo ciclo)
     const guard = new Set<string>();
-
     let ref = this.ymdTodayAR();
 
-    // ✅ Si hoy no cae en ningún ciclo, arrancamos desde la última automática existente
     const lastAuto = await this.reservaRepo.findOne({
       where: {
         usuario: { id: userId },
@@ -1862,67 +1903,68 @@ export class ReservaService {
 
     if (lastAuto?.fechaTurno) {
       const lastAutoYMD = String(lastAuto.fechaTurno).slice(0, 10);
-
-      // si hoy es posterior a la última automática, ref = última automática
-      if (ref > lastAutoYMD) {
-        ref = lastAutoYMD;
-      }
+      if (ref > lastAutoYMD) ref = lastAutoYMD;
     }
 
     while (true) {
-    const c = await this.obtenerCicloPlanActualPorCantidad(userId, ref);
-    if (!c) break;
+      const c = await this.obtenerCicloPlanActualPorCantidad(userId, ref);
+      if (!c) break;
 
-    const finEfectivo = c.completo ? c.finReal : c.finVentana;
+      const finEfectivo = c.completo ? c.finReal : c.finVentana;
 
-    // ✅ ANTI-SOLAPE: si este ciclo se pisa con el más nuevo ya agregado, lo saltamos
-    if (ciclos.length > 0) {
-      const inicioMasNuevo = ciclos[ciclos.length - 1].inicio; // el último agregado (más nuevo)
-      if (finEfectivo >= inicioMasNuevo) {
-        // retrocedemos más para evitar quedarnos pegados
-        ref = this.ymdAddDays(c.inicio, -1);
-        continue;
+      // ✅ ANTI-SOLAPE REAL
+      if (ciclos.length > 0) {
+        const ultimo = ciclos[ciclos.length - 1];
+
+        const ultimoFin = ultimo.completo
+          ? ultimo.finReal
+          : ultimo.finVentana;
+
+        const haySolape =
+          c.inicio <= ultimoFin &&
+          finEfectivo >= ultimo.inicio;
+
+        if (haySolape) {
+          ref = this.ymdAddDays(c.inicio, -1);
+          continue;
+        }
       }
+
+      const key = `${c.inicio}|${c.finVentana}|${finEfectivo}|${c.maximas}`;
+      if (guard.has(key)) break;
+      guard.add(key);
+
+      ciclos.push(c);
+
+      ref = this.ymdAddDays(c.inicio, -1);
+
+      if (ciclos.length >= 36) break;
     }
-
-    const key = `${c.inicio}|${c.finVentana}|${finEfectivo}|${c.maximas}`;
-    if (guard.has(key)) break;
-    guard.add(key);
-
-    ciclos.push(c);
-
-    // ✅ BACKTRACK: día anterior al inicio real del ciclo
-    ref = this.ymdAddDays(c.inicio, -1);
-
-    if (ciclos.length >= 36) break;
-  }
-
 
     const out: any[] = [];
 
-    // 2) Detalle por ciclo SIN solape
     for (let idx = 0; idx < ciclos.length; idx++) {
       const c = ciclos[idx];
 
       const finBase = c.completo ? c.finReal : c.finVentana;
-
       let finCapado = finBase;
-      // ✅ capar para que este ciclo no pise el inicio del ciclo más nuevo ya calculado
+
       if (idx > 0) {
         const inicioMasNuevo = ciclos[idx - 1].inicio;
         const limite = this.ymdAddDays(inicioMasNuevo, -1);
         finCapado = minYmd(finCapado, limite);
       }
-     // 🔒 si el capado queda antes del inicio, este ciclo no aporta nada
-      if (finCapado < c.inicio) {
-        continue;
-      }
+
+      if (finCapado < c.inicio) continue;
 
       const reservas = await this.reservaRepo
         .createQueryBuilder('r')
         .leftJoinAndSelect('r.horario', 'h')
         .where('r."usuarioId" = :uid', { uid: userId })
-        .andWhere('r."fechaTurno" BETWEEN :desde AND :hasta', { desde: c.inicio, hasta: finCapado })
+        .andWhere('r."fechaTurno" BETWEEN :desde AND :hasta', {
+          desde: c.inicio,
+          hasta: finCapado,
+        })
         .andWhere(`
           (
             (LOWER(COALESCE(r.tipo,'')) = 'recuperacion')
@@ -1934,7 +1976,6 @@ export class ReservaService {
         .addOrderBy('r.id', 'ASC')
         .getMany();
 
-
       let asistidas = 0;
       let recuperadas = 0;
       let recuperacionesReservadas = 0;
@@ -1942,14 +1983,13 @@ export class ReservaService {
       let cerrado = 0;
       let sueltas = 0;
 
-      // ✅ SALDO (NO depende de yaPaso)
       let ganadasCancelMom = 0;
       let ganadasCierre = 0;
       let usadasRecup = 0;
-      // ✅ anti-doble-crédito por celda (fecha+horario)
-      const creditKey = (r: any) => `${String(r?.fechaTurno ?? '').slice(0, 10)}|${Number(r?.horario?.id ?? 0)}`;
 
-      // Guardamos "mejor crédito" por celda: 'cerrado' gana a 'cancelado'
+      const creditKey = (r: any) =>
+        `${String(r?.fechaTurno ?? '').slice(0, 10)}|${Number(r?.horario?.id ?? 0)}`;
+
       const creditosPorCelda = new Map<string, 'cerrado' | 'cancelado'>();
 
       const fechasAsistidas: string[] = [];
@@ -1973,38 +2013,25 @@ export class ReservaService {
         const esAuto = r.automatica === true || tipo === 'automatica';
 
         const cierreEstudio = (r as any).cierreEstudio === true;
+        const key = creditKey(r);
 
-        // =========================
-        // ✅ 1) SALDO (NO a-la-fecha) — anti doble crédito
-        // =========================
+        const esCreditoCierre =
+          r.estado === 'cerrado' && cierreEstudio === true;
 
-        // 1) Acumular créditos por celda (fecha+horario) sin duplicar:
-        //    - Si hay CIERRE, ese crédito manda (aunque también exista cancelado).
-        //    - Si no hay cierre, puede contar cancelación momentánea del alumno.
-        {
-          const key = creditKey(r);
+        const esCreditoCancelAlumno =
+          r.estado === 'cancelado' &&
+          esAuto &&
+          r.cancelacionMomentanea === true &&
+          cierreEstudio === false;
 
-          const esCreditoCierre =
-            (r.estado === 'cerrado' && cierreEstudio === true);
-
-          const esCreditoCancelAlumno =
-            (r.estado === 'cancelado' &&
-              esAuto &&
-              r.cancelacionMomentanea === true &&
-              cierreEstudio === false);
-
-          if (esCreditoCierre) {
-            // prioridad cierre
-            creditosPorCelda.set(key, 'cerrado');
-          } else if (esCreditoCancelAlumno) {
-            // solo si no hubo cierre para esa celda
-            if (!creditosPorCelda.has(key)) {
-              creditosPorCelda.set(key, 'cancelado');
-            }
+        if (esCreditoCierre) {
+          creditosPorCelda.set(key, 'cerrado');
+        } else if (esCreditoCancelAlumno) {
+          if (!creditosPorCelda.has(key)) {
+            creditosPorCelda.set(key, 'cancelado');
           }
         }
 
-        // 2) UsadasRecup: esto no cambia (se cuentan las recuperaciones consumidas)
         if (
           esRecup &&
           r.automatica === false &&
@@ -2013,9 +2040,6 @@ export class ReservaService {
           usadasRecup++;
         }
 
-        // ==================================
-        // ✅ 2) HISTORIAL VISUAL (sin yaPaso)
-        // ==================================
         if (
           r.estado === 'cancelado' &&
           esAuto &&
@@ -2033,9 +2057,6 @@ export class ReservaService {
           continue;
         }
 
-        // ==================================
-        // ✅ 3) ASISTENCIA "A LA FECHA"
-        // ==================================
         if (esSuelta) {
           if (yaPaso) {
             sueltas++;
@@ -2059,10 +2080,8 @@ export class ReservaService {
           asistidas++;
           fechasAsistidas.push(fecha);
         }
-
       }
 
-      // ✅ materializar créditos únicos (1 por celda)
       ganadasCierre = 0;
       ganadasCancelMom = 0;
 
@@ -2072,10 +2091,8 @@ export class ReservaService {
       }
 
       const usadasALaFecha = asistidas + recuperadas;
-
       const derechoRecuperacion = ganadasCancelMom + ganadasCierre;
       const saldoRecuperacion = Math.max(0, derechoRecuperacion - usadasRecup);
-
       const excedePlan = usadasALaFecha > c.maximas;
 
       const asc = (arr: string[]) => arr.sort((a, b) => a.localeCompare(b));
@@ -2121,6 +2138,7 @@ export class ReservaService {
     }
 
     out.sort((a, b) => (b.cicloInicio > a.cicloInicio ? 1 : -1));
+
     return out;
   }
 
@@ -2286,7 +2304,7 @@ export class ReservaService {
     return { inicio, finVentana };
   }
 
-  private async inicioDeCicloYaPasoQB(
+  public async inicioDeCicloYaPasoQB(
     userId: number,
     cicloInicioYMD: string,
   ): Promise<{ ok: boolean; fechaTurno?: string; hora?: string; reservaId?: number; reason?: string }> {
@@ -2528,6 +2546,23 @@ export class ReservaService {
     return d.getDay(); // 0 dom .. 6 sab
   }
 
+  private async proximaReservaAutomaticaDespuesDe(
+    userId: number,
+    ymdFin: string,
+  ): Promise<string | null> {
+    const r = await this.reservaRepo.findOne({
+      where: {
+        usuario: { id: userId },
+        tipo: 'automatica',
+        cancelacionPermanente: false,
+        fechaTurno: MoreThan(ymdFin),
+      } as any,
+      order: { fechaTurno: 'ASC', id: 'ASC' } as any,
+    });
+
+    return r?.fechaTurno ? String(r.fechaTurno).slice(0, 10) : null;
+  }
+
   private async proximaFechaTurnoFijoDespuesDe(userId: number, ymdFin: string): Promise<string | null> {
     // 1) turnos fijos activos del usuario
     const tfs = await this.turnoFijoRepo.find({
@@ -2562,6 +2597,13 @@ export class ReservaService {
     return null;
   }
 
+  public async getProximaFechaTurnoFijoDespuesDe(
+    userId: number,
+    ymdFin: string,
+  ): Promise<string | null> {
+    return this.proximaFechaTurnoFijoDespuesDe(userId, ymdFin);
+  }
+
   async getPrimeraReservaFutura(userId: number) {
     const hoy = this.ymdTodayAR();
 
@@ -2576,3 +2618,4 @@ export class ReservaService {
   }
 
 }
+

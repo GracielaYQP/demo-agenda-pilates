@@ -2,7 +2,6 @@
   "compileOnSave": false,
   "compilerOptions": {
     "rootDir": "./src",
-    "baseUrl": "./",
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -21,8 +20,9 @@
     "target": "ES2022",
     "module": "ES2022",
     "lib": ["ES2022", "dom"],
+    "baseUrl": "./",
     "paths": {
-      "@env/*": ["./src/environments/*"]
+      "@env/*": ["src/environments/*"]
     }
   },
   "angularCompilerOptions": {
@@ -32,3 +32,4 @@
     "strictTemplates": true
   }
 }
+

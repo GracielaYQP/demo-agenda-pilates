@@ -1,14 +1,17 @@
 import { Controller, Post, Param, Body, Get, UseGuards, Req, BadRequestException, Patch, Query, ParseDatePipe, ParseIntPipe } from '@nestjs/common';
 import { ReservaService } from './reserva.service';
 import { Request } from 'express';
-import { JwtAuthGuard } from 'src/auth/jwt.guard';
-import { RolesGuard } from 'src/auth/roles.guard';
-import { Public } from 'src/auth/public.decorator';
-import { Roles } from 'src/auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Public } from '../auth/public.decorator';
+import { Roles } from '../auth/roles.decorator';
+import { CiclosAsistenciaService } from '../ciclos-asistencia/ciclos-asistencia.service';
 
 @Controller('reservas')
 export class ReservaController {
-  constructor(private reservaService: ReservaService) {}
+  constructor(private readonly reservaService: ReservaService,
+              private readonly ciclosAsistenciaService: CiclosAsistenciaService,
+  ) {}
 
   @Public()
   @Get('rango')
@@ -72,13 +75,18 @@ export class ReservaController {
     const user = req.user as any;
     const rol = user?.rol;
     const idFromToken = user?.id ?? user?.sub;
-    const userId = body.userId ?? idFromToken;
-
-    if (!userId || isNaN(Number(userId))) throw new BadRequestException('ID de usuario no válido');
     const esAdmin = rol === 'admin' || rol === 'superadmin';
+
+    const userId = esAdmin
+      ? body.userId ?? idFromToken
+      : idFromToken;
+
     if (esAdmin && !body.userId) {
       throw new BadRequestException('Un administrador debe indicar el usuario para reservar');
     }
+
+    if (!userId || isNaN(Number(userId))) throw new BadRequestException('ID de usuario no válido');
+    if (rol === 'admin' && !body.userId) throw new BadRequestException('Un administrador debe indicar el usuario para reservar');
     if (!body.fechaTurno) throw new BadRequestException('Debe indicarse la fecha del turno');
 
     const tipo: 'automatica'|'recuperacion'|'suelta' =
@@ -157,7 +165,7 @@ export class ReservaController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('asistencia-ciclos/:userId')
   getAsistenciaCiclos(@Param('userId', ParseIntPipe) userId: number) {
-    return this.reservaService.getAsistenciaCiclos(userId);
+    return this.ciclosAsistenciaService.getHistorial(userId);
   }
 
   @UseGuards(JwtAuthGuard)

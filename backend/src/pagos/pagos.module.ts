@@ -5,11 +5,13 @@ import { PagosController } from './pagos.controller';
 import { PagosService } from './pagos.service';
 import { Pago } from './pagos.entity'; 
 import { ReservaModule } from '../reserva/reserva.module';
+import { CiclosAsistenciaModule } from '../ciclos-asistencia/ciclos-asistencia.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Pago]),
-    ReservaModule, 
+    ReservaModule,
+    CiclosAsistenciaModule, 
   ],
   controllers: [PagosController],
   providers: [PagosService],

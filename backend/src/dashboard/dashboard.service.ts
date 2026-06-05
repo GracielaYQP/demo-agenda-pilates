@@ -5,10 +5,10 @@ import { Pago } from '../pagos/pagos.entity';
 import { User } from '../users/user.entity';
 import { ValorPlan, PlanTipo } from '../valor-planes/valor-planes.entity';
 import { WhatsAppService } from '../whatsapp/whatsapp.service';
-import { Horario } from 'src/horarios/horarios.entity';
-import { Reserva } from 'src/reserva/reserva.entity';
-import { PagosService } from 'src/pagos/pagos.service';
-import { Notificacion } from 'src/notificaciones/notificacion.entity';
+import { Horario } from '../horarios/horarios.entity';
+import { Reserva } from '../reserva/reserva.entity';
+import { PagosService } from '../pagos/pagos.service';
+import { Notificacion } from '../notificaciones/notificacion.entity';
 
 type ResumenMensualVM = {
   anio: number;

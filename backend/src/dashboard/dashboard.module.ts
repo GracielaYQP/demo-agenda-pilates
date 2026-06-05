@@ -8,8 +8,8 @@ import { Reserva } from '../reserva/reserva.entity';
 import { Horario } from '../horarios/horarios.entity';
 import { DashboardService } from './dashboard.service';
 import { RolesGuard } from '../auth/roles.guard';
-import { WhatsAppModule } from 'src/whatsapp/whatsapp.module';
-import { PagosModule } from 'src/pagos/pagos.module';
+import { WhatsAppModule } from '../whatsapp/whatsapp.module';
+import { PagosModule } from '../pagos/pagos.module';
 import { Notificacion } from '../notificaciones/notificacion.entity';
 
 

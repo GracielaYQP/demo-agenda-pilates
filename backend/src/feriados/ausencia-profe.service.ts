@@ -5,11 +5,11 @@ import { Repository } from 'typeorm';
 import { AusenciaProfe } from './ausencia-profe.entity';
 import { CreateAusenciaDto } from './ausencia-profe.dto';
 import { CierreTipo, ListResponse } from './ausencia-profe.types';
-import { WhatsAppService } from 'src/whatsapp/whatsapp.service';
-import { UsersService } from 'src/users/users.service';
-import { Reserva } from 'src/reserva/reserva.entity';
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
+import { UsersService } from '../users/users.service';
+import { Reserva } from '../reserva/reserva.entity';
 import { In } from 'typeorm';
-import { NotificacionCierre } from 'src/notificaciones/notificacion-cierre.entity';
+import { NotificacionCierre } from '../notificaciones/notificacion-cierre.entity';
 
 @Injectable()
 export class AusenciaProfeService {
